@@ -3,6 +3,16 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
+import patientRoutes from './routes/patientRoutes.js';
+import adherenceRoutes from './routes/adherenceRoutes.js';
+import diagnosisRoutes from './routes/diagnosisRoutes.js';
+import appointmentRoutes from './routes/appointmentRoutes.js';
+import labTestRoutes from './routes/labTestRoutes.js';
+import reportRoutes from './routes/reportRoutes.js';
+import screeningRoutes from './routes/screeningRoutes.js';
+import treatmentRoutes from './routes/treatmentRoutes.js';
+
+
 
 dotenv.config();
 connectDB();
@@ -14,10 +24,18 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/patients', patientRoutes);
+app.use('/api/diagnosis', diagnosisRoutes);
+app.use('/api/adherence', adherenceRoutes);
+app.use('/api/labTest', labTestRoutes);
+app.use('/api/report', reportRoutes);
+app.use('/api/screening', screeningRoutes);
+app.use('/api/appointment', appointmentRoutes);
+app.use('/api/treatments', treatmentRoutes);
 
 app.get('/', (req, res) => {
   res.send('TPMS Backend API is running...');
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+const PORT = process.env.PORT;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
