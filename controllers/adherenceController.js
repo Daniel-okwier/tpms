@@ -1,6 +1,6 @@
 import * as adherenceService from '../services/adherenceService.js';
 
-// @desc Create or update a dose log
+// Create or update a dose log
 export const upsertDose = async (req, res) => {
   try {
     const log = await adherenceService.upsertDoseLog({ user: req.user, body: req.body });

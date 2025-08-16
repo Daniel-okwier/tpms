@@ -1,9 +1,9 @@
 import {
-  createDiagnosis,
-  getDiagnoses,
-  getDiagnosisById,
-  updateDiagnosis,
-  deleteDiagnosis
+  createDiagnosis as createDiagnosisService,
+  getDiagnoses as getDiagnosesService,
+  getDiagnosisById as getDiagnosisByIdService,
+  updateDiagnosis as updateDiagnosisService,
+  deleteDiagnosis as deleteDiagnosisService
 } from '../services/diagnosisService.js';
 
 // Create a diagnosis (doctors/admins)
@@ -26,7 +26,7 @@ export const createDiagnosis = async (req, res) => {
   }
 };
 
-//  Get all diagnoses
+// Get all diagnoses
 export const getDiagnoses = async (req, res) => {
   try {
     const diagnoses = await getDiagnosesService();
@@ -36,7 +36,7 @@ export const getDiagnoses = async (req, res) => {
   }
 };
 
-//  Get a single diagnosis by ID
+// Get a single diagnosis by ID
 export const getDiagnosisById = async (req, res) => {
   try {
     const diagnosis = await getDiagnosisByIdService(req.params.id);
@@ -46,7 +46,7 @@ export const getDiagnosisById = async (req, res) => {
   }
 };
 
-//  Update a diagnosis (doctors/admins)
+// Update a diagnosis (doctors/admins)
 export const updateDiagnosis = async (req, res) => {
   try {
     if (!['doctor', 'admin'].includes(req.user.role)) {

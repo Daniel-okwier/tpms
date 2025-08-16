@@ -82,8 +82,14 @@ export const getDashboardDataService = async (filters = {}) => {
 
   // Appointment metrics
   const totalAppointments = await Appointment.countDocuments(appointmentQuery);
-  const upcomingAppointments = await Appointment.countDocuments({ ...appointmentQuery, date: { $gte: new Date() } });
-  const pastAppointments = await Appointment.countDocuments({ ...appointmentQuery, date: { $lt: new Date() } });
+  const upcomingAppointments = await Appointment.countDocuments({
+    ...appointmentQuery,
+    date: { $gte: new Date() }
+  });
+  const pastAppointments = await Appointment.countDocuments({
+    ...appointmentQuery,
+    date: { $lt: new Date() }
+  });
 
   return {
     filters,

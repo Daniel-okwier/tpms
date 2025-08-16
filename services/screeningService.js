@@ -1,83 +1,65 @@
-import {
-  createScreeningService,
-  getScreeningsService,
-  getScreeningByIdService,
-  updateScreeningService,
-  voidScreeningService,
-  getScreeningsByPatientService
-} from '../services/screeningService.js';
+import Screening from '../models/Screening.js';
 
-
- // Create a screening (nurse/doctor)
- 
-export const createScreening = async (req, res) => {
-  try {
-    const screening = await createScreeningService({
-      data: req.body,
-      userId: req.user._id
-    });
-    res.status(201).json(screening);
-  } catch (err) {
-    res.status(500).json({ message: err.message || 'Failed to create screening' });
-  }
+// Create screening
+export const createScreeningService = async ({ data, userId }) => {
+  const screening = new Screening({
+    ...data,
+    createdBy: userId
+  });
+  return await screening.save();
 };
 
+// Get screenings (staff see all, patients see their own)
+export const getScreeningsService = async (user, query) => {
+  const filter = {};
 
- //Get screenings (staff see all, patient sees own)
- 
-export const getScreenings = async (req, res) => {
-  try {
-    const screenings = await getScreeningsService(req.user, req.query);
-    res.json(screenings);
-  } catch (err) {
-    res.status(500).json({ message: err.message || 'Failed to fetch screenings' });
+  if (user.role === 'patient') {
+    filter.patient = user._id; // patient can only see their own screenings
   }
+
+  if (query.status) {
+    filter.status = query.status;
+  }
+
+  return await Screening.find(filter).populate('patient createdBy');
 };
 
+// Get single screening by ID
+export const getScreeningByIdService = async (id, user) => {
+  const screening = await Screening.findById(id).populate('patient createdBy');
 
-  //Get single screening by ID
- 
-export const getScreeningById = async (req, res) => {
-  try {
-    const screening = await getScreeningByIdService(req.params.id, req.user);
-    res.json(screening);
-  } catch (err) {
-    res.status(500).json({ message: err.message || 'Failed to fetch screening' });
+  if (!screening) {
+    throw new Error('Screening not found');
   }
-};
 
+  if (user.role === 'patient' && screening.patient.toString() !== user._id.toString()) {
+    throw new Error('Unauthorized access to screening');
+  }
+
+  return screening;
+};
 
 // Update screening
- 
-export const updateScreening = async (req, res) => {
-  try {
-    const screening = await updateScreeningService(req.params.id, req.body);
-    res.json(screening);
-  } catch (err) {
-    res.status(500).json({ message: err.message || 'Failed to update screening' });
-  }
+export const updateScreeningService = async (id, updateData) => {
+  const screening = await Screening.findByIdAndUpdate(id, updateData, { new: true });
+  if (!screening) throw new Error('Screening not found');
+  return screening;
 };
 
+// Soft delete (void) screening
+export const voidScreeningService = async (id, reason, voidedBy) => {
+  const screening = await Screening.findById(id);
+  if (!screening) throw new Error('Screening not found');
 
- // Void (soft-delete) screening (doctor/admin)
- 
-export const voidScreening = async (req, res) => {
-  try {
-    const result = await voidScreeningService(req.params.id, req.body.reason, req.user._id);
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ message: err.message || 'Failed to void screening' });
-  }
+  screening.isVoided = true;
+  screening.voidReason = reason;
+  screening.voidedBy = voidedBy;
+
+  await screening.save();
+  return screening;
 };
 
-
- // Get screenings by patient (staff only)
- 
-export const getScreeningsByPatient = async (req, res) => {
-  try {
-    const screenings = await getScreeningsByPatientService(req.params.patientId);
-    res.json(screenings);
-  } catch (err) {
-    res.status(500).json({ message: err.message || 'Failed to fetch patient screenings' });
-  }
+// Get screenings for a specific patient
+export const getScreeningsByPatientService = async (patientId) => {
+  return await Screening.find({ patient: patientId }).populate('createdBy');
 };

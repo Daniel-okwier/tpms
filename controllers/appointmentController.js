@@ -1,4 +1,3 @@
-// controllers/appointmentController.js
 import {
   createAppointmentService,
   getAppointmentsService,
@@ -8,7 +7,7 @@ import {
   deleteAppointmentService
 } from '../services/appointmentService.js';
 
-// @desc Create a new appointment (staff only)
+//Create a new appointment (staff only)
 export const createAppointment = async (req, res) => {
   try {
     const appointment = await createAppointmentService({
@@ -24,7 +23,7 @@ export const createAppointment = async (req, res) => {
   }
 };
 
-// @desc Get all appointments (staff only)
+//Get all appointments (staff only)
 export const getAppointments = async (req, res) => {
   try {
     const appointments = await getAppointmentsService();
@@ -34,7 +33,7 @@ export const getAppointments = async (req, res) => {
   }
 };
 
-// @desc Get my appointments (patient only)
+//Get my appointments (patient only)
 export const getMyAppointments = async (req, res) => {
   try {
     const appointments = await getMyAppointmentsService(req.user._id);
@@ -44,7 +43,7 @@ export const getMyAppointments = async (req, res) => {
   }
 };
 
-// @desc Get single appointment by ID
+//Get single appointment by ID
 export const getAppointmentById = async (req, res) => {
   try {
     const appointment = await getAppointmentByIdService(req.params.id, req.user);
@@ -54,7 +53,7 @@ export const getAppointmentById = async (req, res) => {
   }
 };
 
-// @desc Update appointment (staff only)
+//Update appointment (staff only)
 export const updateAppointment = async (req, res) => {
   try {
     const appointment = await updateAppointmentService(req.params.id, req.body);

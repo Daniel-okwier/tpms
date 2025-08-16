@@ -11,16 +11,22 @@ import {
 
 const router = express.Router();
 
-// Individual reports (optional, can still be used for detailed pages)
+// Patient stats
 router.get('/patient-stats', protect, authorizeRoles('admin', 'doctor'), getPatientStats);
+
+// Treatment outcomes
 router.get('/treatment-outcomes', protect, authorizeRoles('admin', 'doctor'), getTreatmentOutcomes);
+
+// Lab test summary
 router.get('/lab-summary', protect, authorizeRoles('admin', 'doctor', 'lab_staff'), getLabSummary);
+
+// Appointment metrics
 router.get('/appointments', protect, authorizeRoles('admin', 'doctor', 'nurse'), getAppointmentMetrics);
 
-// Trends (previous endpoint for charts)
+// Trends
 router.get('/trends', protect, authorizeRoles('admin', 'doctor'), getTrends);
 
-// Aggregated hospital dashboard (new endpoint)
+// Full aggregated dashboard
 router.get('/full-dashboard', protect, authorizeRoles('admin', 'doctor'), getFullDashboard);
 
 export default router;
