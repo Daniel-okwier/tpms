@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import connectDB from './config/db.js';
+
 import authRoutes from './routes/authRoutes.js';
 import patientRoutes from './routes/patientRoutes.js';
 import adherenceRoutes from './routes/adherenceRoutes.js';
@@ -14,18 +15,14 @@ import treatmentRoutes from './routes/treatmentRoutes.js';
 
 import errorHandler from './middleware/errorHandler.js';
 
-
-
 dotenv.config();
 connectDB();
 
 const app = express();
 
+// Middleware
 app.use(cors());
 app.use(express.json());
-
-// Global error handler (after all routes)
-app.use(errorHandler);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -42,5 +39,13 @@ app.get('/', (req, res) => {
   res.send('TPMS Backend API is running...');
 });
 
-const PORT = process.env.PORT;
+// 404 handler for unknown routes
+app.use((req, res, next) => {
+  res.status(404).json({ message: 'Route not found' });
+});
+
+// Global error handler — must come after all routes
+app.use(errorHandler);
+
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

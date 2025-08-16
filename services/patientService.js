@@ -25,21 +25,23 @@ export const searchPatientService = async ({ mrn, name }) => {
 
   if (mrn) {
     query.mrn = mrn; // exact match
-  } else if (name) {
+    const patient = await Patient.findOne(query).populate('createdBy', 'name email role');
+    if (!patient) throw new ErrorResponse('Patient not found', 404);
+    return patient; // single patient if MRN is used
+  } 
+
+  if (name) {
+    // partial match on firstName or lastName
     query.$or = [
       { firstName: { $regex: name, $options: 'i' } },
       { lastName: { $regex: name, $options: 'i' } }
     ];
-  } else {
-    throw new ErrorResponse('Please provide either mrn or name for search', 400);
+    const patients = await Patient.find(query).populate('createdBy', 'name email role');
+    if (patients.length === 0) throw new ErrorResponse('No patients found', 404);
+    return patients; // array of matching patients
   }
 
-  const patient = await Patient.findOne(query).populate('createdBy', 'name email role');
-
-  if (!patient) {
-    throw new ErrorResponse('Patient not found', 404);
-  }
-  return patient;
+  throw new ErrorResponse('Please provide MRN or name to search', 400);
 };
 
 // Update patient
