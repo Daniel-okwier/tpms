@@ -12,6 +12,8 @@ import reportRoutes from './routes/reportRoutes.js';
 import screeningRoutes from './routes/screeningRoutes.js';
 import treatmentRoutes from './routes/treatmentRoutes.js';
 
+import errorHandler from './middleware/errorHandler.js';
+
 
 
 dotenv.config();
@@ -21,6 +23,9 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Global error handler (after all routes)
+app.use(errorHandler);
 
 // Routes
 app.use('/api/auth', authRoutes);
