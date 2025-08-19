@@ -11,7 +11,12 @@ export const protect = async (req, res, next) => {
     try {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
       req.user = await User.findById(decoded.id).select('-password');
+      if (req.user) {
+        req.user.role = decoded.role; // ✅ make sure role is included
+      }
+
       next();
     } catch (error) {
       return res.status(401).json({ message: 'Not authorized, token failed' });

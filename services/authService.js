@@ -1,8 +1,7 @@
 import User from '../models/user.js';
 import generateToken from '../utils/generateToken.js';
 
- // Register a new user
- 
+// Register a new user
 export const register = async ({ name, email, password, role }) => {
   const userExists = await User.findOne({ email });
   if (userExists) {
@@ -21,13 +20,11 @@ export const register = async ({ name, email, password, role }) => {
     name: user.name,
     email: user.email,
     role: user.role,
-    token: generateToken(user._id)
+    token: generateToken(user._id, user.role) // ✅ role included
   };
 };
 
-
- //Login user
- 
+// Login user
 export const login = async ({ email, password }) => {
   const user = await User.findOne({ email });
   if (!user || !(await user.matchPassword(password))) {
@@ -39,13 +36,11 @@ export const login = async ({ email, password }) => {
     name: user.name,
     email: user.email,
     role: user.role,
-    token: generateToken(user._id)
+    token: generateToken(user._id, user.role) // ✅ role included
   };
 };
 
-
- //Get user profile
- 
+// Get user profile
 export const getProfile = async (userId) => {
   const user = await User.findById(userId).select('-password');
   if (!user) {

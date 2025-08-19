@@ -1,9 +1,9 @@
 import {
-  createDiagnosis as createDiagnosisService,
-  getDiagnoses as getDiagnosesService,
-  getDiagnosisById as getDiagnosisByIdService,
-  updateDiagnosis as updateDiagnosisService,
-  deleteDiagnosis as deleteDiagnosisService
+  createDiagnosisService,
+  getDiagnosesService,
+  getDiagnosisByIdService,
+  updateDiagnosisService,
+  deleteDiagnosisService
 } from '../services/diagnosisService.js';
 
 // Create a diagnosis (doctors/admins)
@@ -20,9 +20,9 @@ export const createDiagnosis = async (req, res) => {
       diagnosedBy: req.user._id
     });
 
-    res.status(201).json(diagnosis);
+    res.status(201).json({ success: true, data: diagnosis });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to create diagnosis', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to create diagnosis', error: error.message });
   }
 };
 
@@ -30,23 +30,23 @@ export const createDiagnosis = async (req, res) => {
 export const getDiagnoses = async (req, res) => {
   try {
     const diagnoses = await getDiagnosesService();
-    res.json(diagnoses);
+    res.json({ success: true, data: diagnoses });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch diagnoses', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch diagnoses', error: error.message });
   }
 };
 
-// Get a single diagnosis by ID
+// Get single diagnosis by ID
 export const getDiagnosisById = async (req, res) => {
   try {
     const diagnosis = await getDiagnosisByIdService(req.params.id);
-    res.json(diagnosis);
+    res.json({ success: true, data: diagnosis });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch diagnosis', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch diagnosis', error: error.message });
   }
 };
 
-// Update a diagnosis (doctors/admins)
+// Update diagnosis (doctors/admins)
 export const updateDiagnosis = async (req, res) => {
   try {
     if (!['doctor', 'admin'].includes(req.user.role)) {
@@ -54,13 +54,13 @@ export const updateDiagnosis = async (req, res) => {
     }
 
     const diagnosis = await updateDiagnosisService(req.params.id, req.body);
-    res.json(diagnosis);
+    res.json({ success: true, data: diagnosis });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to update diagnosis', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to update diagnosis', error: error.message });
   }
 };
 
-// Delete a diagnosis (admins only)
+// Delete diagnosis (admins only)
 export const deleteDiagnosis = async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
@@ -68,8 +68,8 @@ export const deleteDiagnosis = async (req, res) => {
     }
 
     const result = await deleteDiagnosisService(req.params.id);
-    res.json(result);
+    res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to delete diagnosis', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to delete diagnosis', error: error.message });
   }
 };

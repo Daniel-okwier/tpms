@@ -31,7 +31,7 @@ app.use('/api/diagnosis', diagnosisRoutes);
 app.use('/api/adherence', adherenceRoutes);
 app.use('/api/labTest', labTestRoutes);
 app.use('/api/report', reportRoutes);
-app.use('/api/screening', screeningRoutes);
+app.use('/api/screenings', screeningRoutes);
 app.use('/api/appointment', appointmentRoutes);
 app.use('/api/treatments', treatmentRoutes);
 
@@ -44,8 +44,8 @@ app.use((req, res, next) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-// Global error handler — must come after all routes
+// Global error handler 
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

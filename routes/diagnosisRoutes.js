@@ -6,14 +6,23 @@ import {
   updateDiagnosis,
   deleteDiagnosis
 } from '../controllers/diagnosisController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { protect, authorizeRoles as authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.post('/', protect, createDiagnosis);
-router.get('/', protect, getDiagnoses);
-router.get('/:id', protect, getDiagnosisById);
-router.put('/:id', protect, updateDiagnosis);
-router.delete('/:id', protect, deleteDiagnosis);
+// Create diagnosis (doctor/admin only)
+router.post('/', protect, authorize('doctor', 'admin'), createDiagnosis);
+
+// Get all diagnoses (staff only)
+router.get('/', protect, authorize('nurse', 'doctor', 'admin'), getDiagnoses);
+
+// Get a single diagnosis (staff only)
+router.get('/:id', protect, authorize('nurse', 'doctor', 'admin'), getDiagnosisById);
+
+// Update diagnosis (doctor/admin only)
+router.put('/:id', protect, authorize('doctor', 'admin'), updateDiagnosis);
+
+// Delete diagnosis (doctor/admin only)
+router.delete('/:id', protect, authorize('doctor', 'admin'), deleteDiagnosis);
 
 export default router;
