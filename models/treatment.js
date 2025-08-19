@@ -26,7 +26,7 @@ const treatmentSchema = new mongoose.Schema({
     enum: ['planned','ongoing', 'completed', 'defaulted', 'failed', 'stopped'],
     default: 'planned'
   },
-  visitSchedule: [ // appointment dates (auto-generated); stored as Date
+  visitSchedule: [ 
     { type: Date }
   ],
   followUps: [ followUpSchema ],

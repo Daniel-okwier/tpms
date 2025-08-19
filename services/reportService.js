@@ -57,9 +57,9 @@ export const getDashboardDataService = async (filters = {}) => {
   // Appointment query
   const appointmentQuery = {};
   if (startDate || endDate) {
-    appointmentQuery.date = {};
-    if (startDate) appointmentQuery.date.$gte = new Date(startDate);
-    if (endDate) appointmentQuery.date.$lte = new Date(endDate);
+    appointmentQuery.appointmentDate = {};
+    if (startDate) appointmentQuery.appointmentDate.$gte = new Date(startDate);
+    if (endDate) appointmentQuery.appointmentDate.$lte = new Date(endDate);
   }
 
   // Patient stats
@@ -84,11 +84,11 @@ export const getDashboardDataService = async (filters = {}) => {
   const totalAppointments = await Appointment.countDocuments(appointmentQuery);
   const upcomingAppointments = await Appointment.countDocuments({
     ...appointmentQuery,
-    date: { $gte: new Date() }
+    appointmentDate: { $gte: new Date() }
   });
   const pastAppointments = await Appointment.countDocuments({
     ...appointmentQuery,
-    date: { $lt: new Date() }
+    appointmentDate: { $lt: new Date() }
   });
 
   return {
