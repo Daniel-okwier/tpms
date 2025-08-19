@@ -2,14 +2,14 @@ import mongoose from 'mongoose';
 
 const resultCommonSchema = new mongoose.Schema({
   // Generic result fields (used by all tests)
-  resultText: { type: String },      // free text summary
-  notes: { type: String },           // lab internal notes
+  resultText: { type: String },      
+  notes: { type: String },           
 }, { _id: false });
 
 const geneXpertSchema = new mongoose.Schema({
   mtbDetected: { type: String, enum: ['detected', 'not_detected', 'indeterminate'], default: 'indeterminate' },
   rifResistance: { type: String, enum: ['detected', 'not_detected', 'indeterminate'], default: 'indeterminate' },
-  ctValue: { type: Number } // optional
+  ctValue: { type: Number } 
 }, { _id: false });
 
 const smearSchema = new mongoose.Schema({
