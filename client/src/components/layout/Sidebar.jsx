@@ -1,47 +1,51 @@
-import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, FlaskConical, ClipboardList } from 'lucide-react';
-import { useSelector } from 'react-redux';
+import React from "react";
+import { Link, useLocation } from "react-router-dom";
+import {
+  Users,
+  Activity,
+  ClipboardList,
+  FlaskConical,
+  Calendar,
+  Stethoscope,
+  FileText,
+} from "lucide-react";
 
-const linksByRole = {
-  admin: [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/patients', icon: Users, label: 'Patients' },
-    { to: '/reports', icon: ClipboardList, label: 'Reports' },
-    { to: '/lab', icon: FlaskConical, label: 'Lab' },
-  ],
-  doctor: [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/patients', icon: Users, label: 'Patients' },
-  ],
-  lab: [
-    { to: '/lab', icon: FlaskConical, label: 'Lab' },
-    { to: '/reports', icon: ClipboardList, label: 'Reports' },
-  ],
-};
+const navItems = [
+  { name: "Dashboard", path: "/dashboard", icon: Activity },
+  { name: "Patients", path: "/patients", icon: Users },
+  { name: "Diagnosis", path: "/diagnosis", icon: ClipboardList },
+  { name: "Lab Tests", path: "/labtests", icon: FlaskConical },
+  { name: "Screenings", path: "/screenings", icon: Stethoscope },
+  { name: "Appointments", path: "/appointments", icon: Calendar },
+  { name: "Treatments", path: "/treatments", icon: ClipboardList },
+  { name: "Reports", path: "/reports", icon: FileText },
+];
 
 export default function Sidebar() {
-  const { user } = useSelector((state) => state.auth);
-  const role = user?.role || 'doctor'; // fallback for demo
-  const navLinks = linksByRole[role] || [];
+  const location = useLocation();
 
   return (
-    <aside className="w-56 bg-sky-800 text-white flex flex-col">
-      <div className="px-4 py-3 text-xl font-bold border-b border-sky-700">TPMS</div>
-      <nav className="flex-1 p-2">
-        {navLinks.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              `flex items-center gap-2 px-3 py-2 rounded mb-1 transition ${
-                isActive ? 'bg-sky-600' : 'hover:bg-sky-700'
-              }`
-            }
-          >
-            <Icon className="w-5 h-5" />
-            <span>{label}</span>
-          </NavLink>
-        ))}
+    <aside className="fixed top-0 left-0 h-full w-64 bg-blue-900 text-gray-100 shadow-lg flex flex-col">
+      <div className="text-2xl font-bold p-4 border-b border-blue-700">
+        TPMS
+      </div>
+      <nav className="flex-1 p-4 space-y-2">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path;
+          return (
+            <Link
+              key={item.name}
+              to={item.path}
+              className={`flex items-center p-2 rounded-lg transition-all 
+                hover:bg-blue-800 hover:pl-4 
+                ${isActive ? "bg-blue-800 font-semibold border-l-4 border-blue-400" : ""}`}
+            >
+              <Icon className="mr-3" size={20} />
+              {item.name}
+            </Link>
+          );
+        })}
       </nav>
     </aside>
   );

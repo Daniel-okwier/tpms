@@ -1,14 +1,14 @@
-import { Outlet } from 'react-router-dom';
-import Navbar from './Navbar';
-import Sidebar from './Sidebar';
+import { Outlet } from "react-router-dom";
+import Navbar from "./Navbar";
+import Sidebar from "./Sidebar";
 
 export default function MainLayout() {
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex bg-blue-950 min-h-screen">
       <Sidebar />
-      <div className="flex flex-col flex-1">
+      <div className="flex-1 ml-64">
         <Navbar />
-        <main className="p-6 flex-1 overflow-y-auto">
+        <main className="p-6 text-gray-100">
           <Outlet />
         </main>
       </div>
