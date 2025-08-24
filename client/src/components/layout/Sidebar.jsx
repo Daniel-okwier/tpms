@@ -9,6 +9,7 @@ import {
   Stethoscope,
   FileText,
 } from "lucide-react";
+import logo from "../../assets/Logoportal.png";
 
 const navItems = [
   { name: "Dashboard", path: "/dashboard", icon: Activity },
@@ -23,12 +24,25 @@ const navItems = [
 
 export default function Sidebar() {
   const location = useLocation();
+  const facilityName = import.meta.env.VITE_FACILITY_NAME || "TPMS";
 
   return (
     <aside className="fixed top-0 left-0 h-full w-64 bg-blue-900 text-gray-100 shadow-lg flex flex-col">
-      <div className="text-2xl font-bold p-4 border-b border-blue-700">
-        TPMS
+      {/* Header with logo */}
+      <div className="flex items-center gap-3 p-4 border-b border-blue-700">
+        <img
+          src={logo}
+          alt="Facility logo"
+          className="h-10 w-10 shrink-0"
+          draggable="false"
+        />
+        <div className="leading-tight">
+          <div className="text-lg font-bold">{facilityName}</div>
+          <div className="text-[11px] text-blue-200">TB Patient Management</div>
+        </div>
       </div>
+
+      {/* Nav */}
       <nav className="flex-1 p-4 space-y-2">
         {navItems.map((item) => {
           const Icon = item.icon;
