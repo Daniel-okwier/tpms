@@ -12,21 +12,51 @@ import {
 const router = express.Router();
 
 // Patient stats
-router.get('/patient-stats', protect, authorizeRoles('admin', 'doctor'), getPatientStats);
+router.get(
+  '/patient-stats',
+  protect,
+  authorizeRoles('admin', 'doctor'),
+  getPatientStats
+);
 
 // Treatment outcomes
-router.get('/treatment-outcomes', protect, authorizeRoles('admin', 'doctor'), getTreatmentOutcomes);
+router.get(
+  '/treatment-outcomes',
+  protect,
+  authorizeRoles('admin', 'doctor'),
+  getTreatmentOutcomes
+);
 
 // Lab test summary
-router.get('/lab-summary', protect, authorizeRoles('admin', 'doctor', 'lab_staff'), getLabSummary);
+router.get(
+  '/lab-summary',
+  protect,
+  authorizeRoles('admin', 'doctor', 'lab_staff'),
+  getLabSummary
+);
 
 // Appointment metrics
-router.get('/appointments', protect, authorizeRoles('admin', 'doctor', 'nurse'), getAppointmentMetrics);
+router.get(
+  '/appointments',
+  protect,
+  authorizeRoles('admin', 'doctor', 'nurse'),
+  getAppointmentMetrics
+);
 
 // Trends
-router.get('/trends', protect, authorizeRoles('admin', 'doctor'), getTrends);
+router.get(
+  '/trends',
+  protect,
+  authorizeRoles('admin', 'doctor'),
+  getTrends
+);
 
 // Full aggregated dashboard
-router.get('/full-dashboard', protect, authorizeRoles('admin', 'doctor'), getFullDashboard);
+router.get(
+  '/full-dashboard',
+  protect,
+  authorizeRoles('admin', 'doctor'),
+  getFullDashboard
+);
 
 export default router;

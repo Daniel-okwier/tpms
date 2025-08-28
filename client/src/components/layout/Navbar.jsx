@@ -1,29 +1,54 @@
-import { useSelector, useDispatch } from 'react-redux';
-import { LogOut, User } from 'lucide-react';
-import { logout } from '../../features/auth/authSlice'; // adjust path if different
+import React from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { Link, useNavigate } from "react-router-dom";
+import { logout } from "../../features/auth/authSlice";
 
 export default function Navbar() {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
 
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/login");
+  };
+
   return (
-    <header className="flex items-center justify-between bg-white shadow px-4 py-2">
-      <h1 className="text-lg font-semibold text-sky-700">TPMS</h1>
-      <div className="flex items-center gap-4">
-        {user && (
-          <div className="flex items-center gap-2">
-            <User className="w-5 h-5 text-slate-600" />
-            <span className="text-sm font-medium text-slate-700">{user.name}</span>
-          </div>
-        )}
-        <button
-          onClick={() => dispatch(logout())}
-          className="flex items-center gap-1 px-3 py-1 bg-sky-600 text-white rounded hover:bg-sky-700 transition"
-        >
-          <LogOut className="w-4 h-4" />
-          Logout
-        </button>
+    <nav className="bg-blue-800 text-white px-6 py-3 flex justify-between items-center shadow-md">
+      <div className="text-lg font-bold">
+        <Link to="/dashboard">TPMS</Link>
       </div>
-    </header>
+
+      <div className="space-x-6 hidden md:flex">
+        {user?.role === "admin" && (
+          <Link to="/manage-users" className="hover:underline">
+            Manage Users
+          </Link>
+        )}
+      </div>
+
+      <div className="flex items-center space-x-4">
+        {user ? (
+          <>
+            <span className="text-sm font-medium">
+              {user.name} ({user.role})
+            </span>
+            <button
+              onClick={handleLogout}
+              className="bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md text-sm"
+            >
+              Logout
+            </button>
+          </>
+        ) : (
+          <Link
+            to="/login"
+            className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-md text-sm"
+          >
+            Login
+          </Link>
+        )}
+      </div>
+    </nav>
   );
 }

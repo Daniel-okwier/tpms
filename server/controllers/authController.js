@@ -1,36 +1,30 @@
 import * as authService from '../services/authService.js';
 
-// Register a new user
-// @route   POST /api/auth/register
-// @access  Public
+
 export const registerUser = async (req, res) => {
   try {
     const data = await authService.register(req.body);
-    res.status(201).json(data);
+    res.status(201).json(data); 
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 };
 
-// Login user
-// @route   POST /api/auth/login
-// @access  Public
+
 export const loginUser = async (req, res) => {
   try {
     const data = await authService.login(req.body);
-    res.json(data);
+    res.json(data); 
   } catch (err) {
     res.status(401).json({ message: err.message });
   }
 };
 
-// Get logged-in user profile
-// @route   GET /api/auth/profile
-// @access  Private
+
 export const getUserProfile = async (req, res) => {
   try {
     const data = await authService.getProfile(req.user._id);
-    res.json(data);
+    res.json(data); 
   } catch (err) {
     res.status(404).json({ message: err.message });
   }

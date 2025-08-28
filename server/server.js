@@ -20,8 +20,14 @@ connectDB();
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// ✅ CORS config — allow frontend origin and credentials
+app.use(
+  cors({
+    origin: "http://localhost:5173", // your React frontend
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
 // Routes
@@ -30,7 +36,7 @@ app.use('/api/patients', patientRoutes);
 app.use('/api/diagnosis', diagnosisRoutes);
 app.use('/api/adherence', adherenceRoutes);
 app.use('/api/labTest', labTestRoutes);
-app.use('/api/report', reportRoutes);
+app.use('/api/reports', reportRoutes);
 app.use('/api/screenings', screeningRoutes);
 app.use('/api/appointment', appointmentRoutes);
 app.use('/api/treatments', treatmentRoutes);

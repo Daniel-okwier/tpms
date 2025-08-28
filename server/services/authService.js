@@ -8,19 +8,16 @@ export const register = async ({ name, email, password, role }) => {
     throw new Error('User already exists');
   }
 
-  const user = await User.create({
-    name,
-    email,
-    password,
-    role
-  });
+  const user = await User.create({ name, email, password, role });
 
   return {
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    token: generateToken(user._id, user.role) // ✅ role included
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
+    token: generateToken(user._id, user.role),
   };
 };
 
@@ -32,11 +29,13 @@ export const login = async ({ email, password }) => {
   }
 
   return {
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    token: generateToken(user._id, user.role) // ✅ role included
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
+    token: generateToken(user._id, user.role),
   };
 };
 
