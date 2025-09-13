@@ -1,8 +1,7 @@
-// src/pages/Login.jsx
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { setCredentials } from "../features/auth/authSlice";
+import { setCredentials } from "../redux/slices/authSlice";
 import api from "../utils/axios";
 import logo from "../assets/Logoportal.png";
 
@@ -28,11 +27,15 @@ export default function Login() {
     setSubmitting(true);
 
     try {
-      const { data } = await api.post("auth/login", credentials); // expects { token, user }
+      const { data } = await api.post("auth/login", credentials);
 
-      dispatch(setCredentials(data));
+      dispatch(
+        setCredentials({
+          user: data.user,
+          token: data.token,
+        })
+      );
 
-      // Redirect based on role (all roles allowed to dashboard)
       navigate("/dashboard");
     } catch (err) {
       setError(err.response?.data?.message || "Invalid email or password");
@@ -41,7 +44,6 @@ export default function Login() {
     }
   };
 
-  // Show global loading screen while session restoring
   if (loading) {
     return (
       <div className="min-h-screen bg-blue-800 flex items-center justify-center">
@@ -89,9 +91,23 @@ export default function Login() {
             disabled={submitting}
             className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg p-3 transition-colors flex items-center justify-center"
           >
+            {submitting ? (
+              <span className="loader border-white border-2 border-t-transparent rounded-full w-5 h-5 mr-2 animate-spin"></span>
+            ) : null}
             {submitting ? "Logging in..." : "Login"}
           </button>
         </form>
+
+        {/* Forgot password link */}
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={() => navigate("/forgot-password")}
+            className="text-blue-700 hover:underline text-sm"
+          >
+            Forgot your password?
+          </button>
+        </div>
       </div>
     </div>
   );

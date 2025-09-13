@@ -1,7 +1,7 @@
 import React from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import { logout } from "../../features/auth/authSlice";
+import { setCredentials } from "../../redux/slices/authSlice";
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -9,7 +9,14 @@ export default function Navbar() {
   const { user } = useSelector((state) => state.auth);
 
   const handleLogout = () => {
-    dispatch(logout());
+    // Clear auth state
+    dispatch(setCredentials(null));
+
+    // Remove from localStorage (if stored there)
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    // Redirect to login
     navigate("/login");
   };
 
