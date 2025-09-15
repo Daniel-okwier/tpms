@@ -10,7 +10,8 @@ import ForgotPassword from "@/pages/ForgotPassword";
 
 // Protected pages
 import Dashboard from "@/pages/Dashboard";
-import Patients from "@/pages/Patients";
+import Patients from "@/pages/ManagePatients"; 
+import PatientDetails from "@/pages/PatientDetails"; 
 import Diagnosis from "@/pages/Diagnosis";
 import LabTests from "@/pages/LabTests";
 import Screenings from "@/pages/Screenings";
@@ -75,18 +76,30 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Patient Management */}
         <Route
           path="/patients"
           element={
-            <ProtectedRoute roles={["admin", "doctor"]}>
+            <ProtectedRoute roles={["doctor", "nurse"]}>
               <Patients />
             </ProtectedRoute>
           }
         />
         <Route
+          path="/patients/:id"
+          element={
+            <ProtectedRoute roles={["doctor", "nurse"]}>
+              <PatientDetails />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Other Modules */}
+        <Route
           path="/diagnosis"
           element={
-            <ProtectedRoute roles={["admin", "doctor"]}>
+            <ProtectedRoute roles={["doctor"]}>
               <Diagnosis />
             </ProtectedRoute>
           }
@@ -94,7 +107,7 @@ export default function App() {
         <Route
           path="/labtests"
           element={
-            <ProtectedRoute roles={["admin", "lab_staff"]}>
+            <ProtectedRoute roles={["lab_staff"]}>
               <LabTests />
             </ProtectedRoute>
           }
@@ -102,7 +115,7 @@ export default function App() {
         <Route
           path="/screenings"
           element={
-            <ProtectedRoute roles={["admin", "doctor"]}>
+            <ProtectedRoute roles={["doctor"]}>
               <Screenings />
             </ProtectedRoute>
           }
@@ -110,7 +123,7 @@ export default function App() {
         <Route
           path="/appointments"
           element={
-            <ProtectedRoute roles={["admin", "doctor", "nurse"]}>
+            <ProtectedRoute roles={["doctor", "nurse"]}>
               <Appointments />
             </ProtectedRoute>
           }
@@ -118,7 +131,7 @@ export default function App() {
         <Route
           path="/treatments"
           element={
-            <ProtectedRoute roles={["admin", "doctor"]}>
+            <ProtectedRoute roles={["doctor"]}>
               <Treatments />
             </ProtectedRoute>
           }
