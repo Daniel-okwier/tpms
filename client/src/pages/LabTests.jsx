@@ -1,17 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchLabTests, labTestsSelectors, setFilters, setPage } from '../redux/slices/labTestsSlice';
+import { 
+  fetchLabTests, 
+  labTestsSelectors, 
+  setFilters, 
+  setPage, 
+  deleteLabTest 
+} from '../redux/slices/labTestsSlice';
 import LabTestForm from './LabTestForm';
 import LabTestDetail from './LabTestDetail';
 import { useAuth } from '../contexts/AuthContext';
 
 const LabTestsPage = () => {
   const dispatch = useDispatch();
-  const { user } = useAuth(); 
+  const { user } = useAuth();
   const labTests = useSelector(labTestsSelectors.selectAll);
   const loading = useSelector((state) => state.labTests.loading);
   const total = useSelector((state) => state.labTests.total);
   const page = useSelector((state) => state.labTests.page);
+  const filters = useSelector((state) => state.labTests.filters);
 
   const [search, setSearch] = useState('');
   const [selectedTest, setSelectedTest] = useState(null);
@@ -20,12 +27,11 @@ const LabTestsPage = () => {
 
   useEffect(() => {
     dispatch(fetchLabTests());
-  }, [dispatch]);
+  }, [dispatch, page, filters]);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    dispatch(setFilters({ q: search }));
-    dispatch(fetchLabTests());
+    dispatch(setFilters({ ...filters, q: search }));
   };
 
   const handleView = (test) => {
@@ -36,6 +42,16 @@ const LabTestsPage = () => {
   const handleAdd = () => {
     setSelectedTest(null);
     setShowForm(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this lab test?')) return;
+    try {
+      await dispatch(deleteLabTest(id)).unwrap();
+      dispatch(fetchLabTests());
+    } catch (err) {
+      console.error('Failed to delete lab test:', err);
+    }
   };
 
   return (
@@ -112,6 +128,7 @@ const LabTestsPage = () => {
                   )}
                   {user.role === 'admin' && (
                     <button
+                      onClick={() => handleDelete(test._id)}
                       className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
                     >
                       Delete
@@ -123,6 +140,28 @@ const LabTestsPage = () => {
           </tbody>
         </table>
       )}
+
+      {/* Pagination */}
+      <div className="flex justify-between items-center mt-4">
+        <span>Total: {total}</span>
+        <div className="flex gap-2">
+          <button
+            onClick={() => dispatch(setPage(Math.max(1, page - 1)))}
+            className="px-3 py-1 border rounded hover:bg-gray-100"
+            disabled={page === 1}
+          >
+            Prev
+          </button>
+          <span>Page {page}</span>
+          <button
+            onClick={() => dispatch(setPage(page + 1))}
+            className="px-3 py-1 border rounded hover:bg-gray-100"
+            disabled={page * 12 >= total}
+          >
+            Next
+          </button>
+        </div>
+      </div>
 
       {/* Modals */}
       {showForm && (

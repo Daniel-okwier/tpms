@@ -76,4 +76,35 @@ const LabTestDetail = ({ test, onClose }) => {
             <div className="border-t pt-2">
               <h3 className="font-semibold">Chest X-ray</h3>
               <div>Impression: {test.xray.impression || '-'}</div>
-              <d
+              <div>Cavitation: {test.xray.cavitation ? 'Yes' : 'No'}</div>
+              <div>Infiltrates: {test.xray.infiltrates ? 'Yes' : 'No'}</div>
+              <div>Laterality: {test.xray.laterality}</div>
+            </div>
+          )}
+
+          {test.attachments && test.attachments.length > 0 && (
+            <div className="border-t pt-2">
+              <h3 className="font-semibold">Attachments</h3>
+              <ul className="list-disc ml-5">
+                {test.attachments.map((att, idx) => (
+                  <li key={idx}>
+                    <a
+                      href={att}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {att.split('/').pop()}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default LabTestDetail;
