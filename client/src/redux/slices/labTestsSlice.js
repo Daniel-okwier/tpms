@@ -30,11 +30,10 @@ const getAuthHeaders = (getState) => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-
+// =====================
 // Async Thunks
+// =====================
 
-
-// Fetch lab tests with optional params
 export const fetchLabTests = createAsyncThunk(
   "labTests/fetch",
   async (opts = {}, { getState, rejectWithValue }) => {
@@ -52,14 +51,18 @@ export const fetchLabTests = createAsyncThunk(
 
       const headers = getAuthHeaders(getState);
       const response = await axios.get("/api/lab-tests", { params, headers });
-      return response.data;
+
+      // Ensure data is always an array
+      return {
+        data: response.data?.data || [],
+        count: response.data?.count ?? 0,
+      };
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
     }
   }
 );
 
-// Create a new lab test
 export const createLabTest = createAsyncThunk(
   "labTests/create",
   async (data, { getState, rejectWithValue }) => {
@@ -73,7 +76,6 @@ export const createLabTest = createAsyncThunk(
   }
 );
 
-// Update an existing lab test
 export const updateLabTest = createAsyncThunk(
   "labTests/update",
   async ({ id, updates }, { getState, rejectWithValue }) => {
@@ -87,7 +89,6 @@ export const updateLabTest = createAsyncThunk(
   }
 );
 
-// Delete a lab test
 export const deleteLabTest = createAsyncThunk(
   "labTests/delete",
   async (id, { getState, rejectWithValue }) => {
@@ -101,16 +102,16 @@ export const deleteLabTest = createAsyncThunk(
   }
 );
 
-
+// =====================
 // Slice
-
+// =====================
 const labTestsSlice = createSlice({
   name: "labTests",
   initialState,
   reducers: {
     setFilters(state, action) {
       state.filters = action.payload;
-      state.page = 1; 
+      state.page = 1; // reset page when filters change
     },
     setPage(state, action) {
       state.page = action.payload;
@@ -125,8 +126,8 @@ const labTestsSlice = createSlice({
       })
       .addCase(fetchLabTests.fulfilled, (state, action) => {
         state.loading = "succeeded";
-        adapter.setAll(state, action.payload.data);
-        state.total = action.payload.count;
+        adapter.setAll(state, action.payload.data || []);
+        state.total = action.payload.count ?? action.payload.data.length;
       })
       .addCase(fetchLabTests.rejected, (state, action) => {
         state.loading = "failed";
@@ -140,7 +141,7 @@ const labTestsSlice = createSlice({
       })
       .addCase(createLabTest.fulfilled, (state, action) => {
         state.loading = "succeeded";
-        adapter.addOne(state, action.payload);
+        if (action.payload) adapter.addOne(state, action.payload);
       })
       .addCase(createLabTest.rejected, (state, action) => {
         state.loading = "failed";
@@ -154,7 +155,7 @@ const labTestsSlice = createSlice({
       })
       .addCase(updateLabTest.fulfilled, (state, action) => {
         state.loading = "succeeded";
-        adapter.upsertOne(state, action.payload);
+        if (action.payload) adapter.upsertOne(state, action.payload);
       })
       .addCase(updateLabTest.rejected, (state, action) => {
         state.loading = "failed";
@@ -177,9 +178,6 @@ const labTestsSlice = createSlice({
   },
 });
 
-// Export actions and selectors
 export const { setFilters, setPage } = labTestsSlice.actions;
 export const labTestsSelectors = adapter.getSelectors((state) => state.labTests);
-
-
 export default labTestsSlice.reducer;
