@@ -68,21 +68,56 @@ const LabTestsPage = () => {
         )}
       </div>
 
-      <form onSubmit={handleSearch} className="mb-4 flex gap-2">
-        <input
-          type="text"
-          placeholder="Search by patient or test..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="border rounded px-3 py-1 w-full"
-        />
-        <button
-          type="submit"
-          className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700"
-        >
-          Search
-        </button>
-      </form>
+     <form onSubmit={handleSearch} className="mb-4 flex flex-wrap gap-2 items-end">
+  <input
+    type="text"
+    placeholder="Search by patient..."
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+    className="border rounded px-3 py-1 flex-1 min-w-[150px]"
+  />
+
+  <select
+    value={filters.testType}
+    onChange={(e) => dispatch(setFilters({ ...filters, testType: e.target.value }))}
+    className="border rounded px-3 py-1"
+  >
+    <option value="">All Test Types</option>
+    {['GeneXpert', 'Smear Microscopy', 'Culture', 'Chest X-ray', 'Other'].map((type) => (
+      <option key={type} value={type}>{type}</option>
+    ))}
+  </select>
+
+  <select
+    value={filters.status}
+    onChange={(e) => dispatch(setFilters({ ...filters, status: e.target.value }))}
+    className="border rounded px-3 py-1"
+  >
+    <option value="">All Statuses</option>
+    {['ordered', 'specimen_collected', 'in_progress', 'completed', 'verified', 'cancelled'].map((s) => (
+      <option key={s} value={s}>{s}</option>
+    ))}
+  </select>
+
+  <button
+    type="submit"
+    className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+  >
+    Apply
+  </button>
+
+  <button
+    type="button"
+    onClick={() => {
+      setSearch('');
+      dispatch(setFilters({ q: '', testType: '', status: '' }));
+    }}
+    className="px-4 py-1 bg-gray-300 rounded hover:bg-gray-400"
+  >
+    Reset
+  </button>
+</form>
+
 
       {loading === 'pending' ? (
         <div>Loading...</div>
