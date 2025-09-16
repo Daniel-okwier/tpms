@@ -8,7 +8,6 @@ import {
   searchPatients,
 } from "@/redux/slices/patientSlice";
 import { useNavigate } from "react-router-dom";
-import api from "@/utils/axios";
 
 export default function Patients() {
   const dispatch = useDispatch();
@@ -26,7 +25,6 @@ export default function Patients() {
 
   function initialForm() {
     return {
-      mrn: "",
       firstName: "",
       lastName: "",
       gender: "male",
@@ -39,55 +37,18 @@ export default function Patients() {
   }
 
   useEffect(() => {
-    // load first page of patients
     dispatch(fetchPatients({ page: 1, limit: 20 }));
   }, [dispatch]);
 
-  // called when opening Create form (only for NEW patients)
-  const ensureNextMrn = async () => {
-    try {
-      // fetch latest patient (page=1, limit=1) — backend returns { success: true, patients, ... }
-      const res = await api.get("/patients?page=1&limit=1");
-      const latest = res.data?.patients?.[0];
-      const next = computeNextMrn(latest?.mrn);
-      setFormData((prev) => ({ ...prev, mrn: next }));
-    } catch (err) {
-      // fallback MRN
-      setFormData((prev) => ({ ...prev, mrn: generateFallbackMrn() }));
-    }
-  };
-
-  const computeNextMrn = (lastMrn) => {
-    if (!lastMrn) return generateFallbackMrn();
-    // find trailing digits
-    const match = lastMrn.match(/(\d+)$/);
-    if (match) {
-      const digits = match[1];
-      const prefix = lastMrn.slice(0, lastMrn.length - digits.length);
-      const nextNum = (parseInt(digits, 10) || 0) + 1;
-      // preserve length with zero padding
-      const nextDigits = String(nextNum).padStart(digits.length, "0");
-      return `${prefix}${nextDigits}`;
-    }
-    // no trailing digits → append -1 (or timestamp)
-    return `${lastMrn}-${Date.now().toString().slice(-5)}`;
-  };
-
-  const generateFallbackMrn = () => {
-    const ts = Date.now().toString().slice(-6);
-    return `MRN-${ts}`;
-  };
-
-  // Show form handler: when opening NEW form generate MRN
-  const openCreateForm = async () => {
+  
+  // Handlers
+ 
+  const openCreateForm = () => {
     setEditingPatient(null);
     setFormData(initialForm());
     setShowForm(true);
-    await ensureNextMrn();
   };
 
-  
-  // Handler
   const handleCreateOrUpdate = async (e) => {
     e.preventDefault();
     setFormLoading(true);
@@ -95,25 +56,22 @@ export default function Patients() {
 
     try {
       if (editingPatient) {
-        await dispatch(
-          updatePatient({ id: editingPatient._id, updates: formData })
-        ).unwrap?.();
+        await dispatch(updatePatient({ id: editingPatient._id, updates: formData })).unwrap?.();
         setMessage("Patient updated successfully.");
       } else {
+        
         await dispatch(createPatient(formData)).unwrap?.();
         setMessage("Patient created successfully.");
       }
 
-      // refresh list
       await dispatch(fetchPatients({ page: 1, limit: 20 }));
       setShowForm(false);
       setEditingPatient(null);
       setFormData(initialForm());
     } catch (err) {
-      setMessage(err?.message || err?.payload?.message || "Operation failed.");
+      setMessage(err?.message || "Operation failed.");
     } finally {
       setFormLoading(false);
-      // clear message after a short while
       setTimeout(() => setMessage(""), 3500);
     }
   };
@@ -125,13 +83,12 @@ export default function Patients() {
       await dispatch(fetchPatients({ page: 1, limit: 20 }));
       setMessage("Patient archived.");
       setTimeout(() => setMessage(""), 3000);
-    } catch (err) {
-      setMessage(err?.message || "Failed to archive.");
+    } catch {
+      setMessage("Failed to archive.");
     }
   };
 
   const handleEdit = (patient) => {
-    // normalize dateOfBirth to yyyy-mm-dd if present
     const dob = patient.dateOfBirth ? patient.dateOfBirth.split("T")[0] : "";
     setEditingPatient(patient);
     setFormData({
@@ -146,28 +103,33 @@ export default function Patients() {
     e?.preventDefault();
     setSearchLoading(true);
     setMessage("");
+
     try {
       if (searchTerm.trim()) {
-        // try both name and mrn search
-        await dispatch(
-          searchPatients({
-            name: searchTerm.trim(),
-            mrn: searchTerm.trim(),
-          })
-        ).unwrap?.();
+        const term = searchTerm.trim();
+
+        if (term.startsWith("PT-")) {
+          // search by MRN
+          await dispatch(searchPatients({ mrn: term })).unwrap?.();
+        } else if (/^\+?\d+$/.test(term)) {
+          // looks like phone
+          await dispatch(searchPatients({ phone: term })).unwrap?.();
+        } else {
+          // search by name
+          await dispatch(searchPatients({ name: term })).unwrap?.();
+        }
       } else {
-        // empty search -> reload
         await dispatch(fetchPatients({ page: 1, limit: 20 }));
       }
-    } catch (err) {
-      setMessage(err?.message || "Search failed.");
+    } catch {
+      setMessage("Search failed.");
     } finally {
       setSearchLoading(false);
       setTimeout(() => setMessage(""), 3000);
     }
   };
 
-  
+ 
   return (
     <div className="p-6">
       {/* Header */}
@@ -181,47 +143,47 @@ export default function Patients() {
         </button>
       </div>
 
-      {/* messages */}
       {message && (
         <div className="mb-4 p-3 rounded bg-green-50 border border-green-200 text-black">
           {message}
         </div>
       )}
 
-      {/* Search bar */}
+      {/* Search */}
       <form onSubmit={handleSearch} className="mb-4 flex gap-2 items-center max-w-md">
         <input
           type="text"
-          placeholder="Search by MRN or Name"
+          placeholder="Search by MRN, Name or Phone"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="border p-2 rounded flex-1 text-black placeholder-slate-400"
-          aria-label="Search patients by MRN or name"
         />
         <button
           type="submit"
           disabled={searchLoading}
-          className={`px-4 py-2 rounded-lg ${searchLoading ? "bg-gray-400 text-white" : "bg-green-600 text-white"}`}
+          className={`px-4 py-2 rounded-lg ${
+            searchLoading ? "bg-gray-400 text-white" : "bg-green-600 text-white"
+          }`}
         >
-          {searchLoading ? "Searching patient..." : "Search"}
+          {searchLoading ? "Searching..." : "Search"}
         </button>
       </form>
 
-      {/* Create / Edit form */}
+      {/* Form */}
       {showForm && (
         <form
           onSubmit={handleCreateOrUpdate}
           className="bg-white shadow-md rounded-lg p-4 mb-6 grid grid-cols-2 gap-4"
         >
-          <input
-            type="text"
-            placeholder="MRN"
-            value={formData.mrn}
-            onChange={(e) => setFormData({ ...formData, mrn: e.target.value })}
-            required
-            className="border p-2 rounded text-black"
-            readOnly={!editingPatient} // MRN auto when creating; allow edit when explicitly editing
-          />
+          {/* MRN is read-only and only shown when editing */}
+          {editingPatient && (
+            <input
+              type="text"
+              value={formData.mrn || ""}
+              readOnly
+              className="border p-2 rounded text-black bg-gray-100"
+            />
+          )}
 
           <input
             type="text"
@@ -231,7 +193,6 @@ export default function Patients() {
             required
             className="border p-2 rounded text-black"
           />
-
           <input
             type="text"
             placeholder="Last Name"
@@ -240,7 +201,6 @@ export default function Patients() {
             required
             className="border p-2 rounded text-black"
           />
-
           <select
             value={formData.gender}
             onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
@@ -248,9 +208,8 @@ export default function Patients() {
           >
             <option value="male">Male</option>
             <option value="female">Female</option>
-            <option value="other">Other</option>
+           
           </select>
-
           <input
             type="date"
             value={formData.dateOfBirth}
@@ -258,7 +217,6 @@ export default function Patients() {
             required
             className="border p-2 rounded text-black"
           />
-
           <input
             type="text"
             placeholder="Phone"
@@ -271,7 +229,6 @@ export default function Patients() {
             }
             className="border p-2 rounded text-black"
           />
-
           <input
             type="email"
             placeholder="Email"
@@ -284,7 +241,6 @@ export default function Patients() {
             }
             className="border p-2 rounded text-black"
           />
-
           <input
             type="text"
             placeholder="Address"
@@ -292,7 +248,6 @@ export default function Patients() {
             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
             className="border p-2 rounded text-black"
           />
-
           <input
             type="text"
             placeholder="Facility Name"
@@ -301,7 +256,6 @@ export default function Patients() {
             required
             className="border p-2 rounded text-black"
           />
-
           <select
             value={formData.initialStatus}
             onChange={(e) => setFormData({ ...formData, initialStatus: e.target.value })}
@@ -310,18 +264,25 @@ export default function Patients() {
             <option value="suspected_tb">Suspected TB</option>
             <option value="confirmed_tb">Confirmed TB</option>
           </select>
-
           <button
             type="submit"
-            className={`col-span-2 py-2 rounded-lg text-white ${formLoading ? "bg-gray-400" : "bg-green-600"}`}
+            className={`col-span-2 py-2 rounded-lg text-white ${
+              formLoading ? "bg-gray-400" : "bg-green-600"
+            }`}
             disabled={formLoading}
           >
-            {formLoading ? (editingPatient ? "Updating..." : "Saving...") : (editingPatient ? "Update Patient" : "Save Patient")}
+            {formLoading
+              ? editingPatient
+                ? "Updating..."
+                : "Saving..."
+              : editingPatient
+              ? "Update Patient"
+              : "Save Patient"}
           </button>
         </form>
       )}
 
-      {/* Patient Table */}
+      {/* Table */}
       {loading ? (
         <p>Loading patients...</p>
       ) : error ? (
@@ -349,28 +310,27 @@ export default function Patients() {
                 items.map((p) => (
                   <tr key={p._id} className="border-b hover:bg-gray-50">
                     <td className="px-4 py-2 text-black">{p.mrn}</td>
-                    <td className="px-4 py-2 text-black font-medium">{p.firstName} {p.lastName}</td>
+                    <td className="px-4 py-2 text-black font-medium">
+                      {p.firstName} {p.lastName}
+                    </td>
                     <td className="px-4 py-2 text-black capitalize">{p.gender}</td>
                     <td className="px-4 py-2 text-black">{p.facilityName}</td>
                     <td className="px-4 py-2 flex gap-2 justify-center">
                       <button
                         onClick={() => navigate(`/patients/${p._id}`)}
                         className="bg-gray-600 text-white px-3 py-1 rounded"
-                        title="View patient"
                       >
                         View
                       </button>
                       <button
                         onClick={() => handleEdit(p)}
                         className="bg-yellow-500 text-white px-3 py-1 rounded"
-                        title="Edit patient"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleArchive(p._id)}
                         className="bg-red-600 text-white px-3 py-1 rounded"
-                        title="Archive patient"
                       >
                         Archive
                       </button>
