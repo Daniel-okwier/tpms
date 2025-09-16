@@ -10,15 +10,17 @@ import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+// /api/lab-tests
 router
   .route('/')
-  .post(protect, authorizeRoles('lab_staff'), createLabTest)
-  .get(protect, authorizeRoles('lab_staff'), getLabTests);
+  .post(protect, authorizeRoles('lab_staff', 'doctor', 'nurse'), createLabTest)
+  .get(protect, authorizeRoles('admin', 'doctor', 'nurse', 'lab_staff'), getLabTests);
 
+// /api/lab-tests/:id
 router
   .route('/:id')
-  .get(protect, authorizeRoles('lab_staff',), getLabTestById)
-  .put(protect, authorizeRoles('lab_staff'), updateLabTest)
-  .delete(protect, authorizeRoles('lab_staff'), deleteLabTest);
+  .get(protect, authorizeRoles('admin', 'doctor', 'nurse', 'lab_staff', 'patient'), getLabTestById)
+  .put(protect, authorizeRoles('lab_staff', 'doctor'), updateLabTest)
+  .delete(protect, authorizeRoles('admin'), deleteLabTest);
 
 export default router;

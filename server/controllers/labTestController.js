@@ -9,7 +9,7 @@ import {
 
 // Create a new lab test order
 // @route   POST /api/lab-tests
-// @access  Doctor, Nurse
+// @access  Lab staff, Doctor, Nurse
 export const createLabTest = asyncHandler(async (req, res) => {
   const labTest = await createLabTestService(req.body, req.user);
   res.status(201).json({ success: true, data: labTest });
@@ -31,7 +31,7 @@ export const getLabTestById = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: test });
 });
 
-//  Update lab test
+// Update lab test
 // @route   PUT /api/lab-tests/:id
 // @access  Lab staff, Doctor
 export const updateLabTest = asyncHandler(async (req, res) => {
