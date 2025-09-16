@@ -15,13 +15,13 @@ const router = express.Router();
 router.post("/", protect, authorizeRoles("admin", "doctor", "nurse"), createPatient);
 
 // Get all active patients (paginated)
-router.get("/", protect, authorizeRoles("admin", "doctor", "nurse"), getPatients);
+router.get("/", protect, authorizeRoles("admin", "doctor", "nurse", "lab_staff"), getPatients);
 
 // Search patients
 router.get(
   "/search",
   protect,
-  authorizeRoles("admin", "doctor", "nurse", "patient"),
+  authorizeRoles("admin", "doctor", "nurse", "lab_staff"),
   searchPatient
 );
 
