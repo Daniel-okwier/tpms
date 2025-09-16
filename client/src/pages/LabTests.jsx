@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const LabTestsPage = () => {
   const dispatch = useDispatch();
-  const { user } = useAuth(); // assumes you have AuthContext
+  const { user } = useAuth(); 
   const labTests = useSelector(labTestsSelectors.selectAll);
   const loading = useSelector((state) => state.labTests.loading);
   const total = useSelector((state) => state.labTests.total);
