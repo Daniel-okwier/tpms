@@ -74,9 +74,9 @@ export const searchPatients = createAsyncThunk(
   }
 );
 
-// ---------------------------
+
 // Slice
-// ---------------------------
+
 const patientSlice = createSlice({
   name: "patients",
   initialState: {

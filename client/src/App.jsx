@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { restoreSession } from "@/redux/slices/authSlice";
 
 // Toast
-import ToastConfig from "@/components/ToastConfig";
+import ToastConfig from "@/components/shared/ToastConfig";
 
 // Public pages
 import Login from "@/pages/Login";
