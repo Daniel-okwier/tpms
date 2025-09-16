@@ -1,5 +1,6 @@
+// src/redux/slices/labTestsSlice.js
 import { createSlice, createAsyncThunk, createEntityAdapter } from "@reduxjs/toolkit";
-import axios from "axios";
+import api from "@/utils/axios"; // ✅ use the custom axios instance
 
 // Entity adapter for normalized data
 const adapter = createEntityAdapter({
@@ -30,10 +31,10 @@ const getAuthHeaders = (getState) => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-// =====================
-// Async Thunks
-// =====================
 
+// Async Thunks
+
+// Fetch lab tests
 export const fetchLabTests = createAsyncThunk(
   "labTests/fetch",
   async (opts = {}, { getState, rejectWithValue }) => {
@@ -50,9 +51,8 @@ export const fetchLabTests = createAsyncThunk(
       };
 
       const headers = getAuthHeaders(getState);
-      const response = await axios.get("/api/lab-tests", { params, headers });
+      const response = await api.get("/lab-tests", { params, headers });
 
-      // Ensure data is always an array
       return {
         data: response.data?.data || [],
         count: response.data?.count ?? 0,
@@ -63,12 +63,13 @@ export const fetchLabTests = createAsyncThunk(
   }
 );
 
+// Create a lab test
 export const createLabTest = createAsyncThunk(
   "labTests/create",
   async (data, { getState, rejectWithValue }) => {
     try {
       const headers = getAuthHeaders(getState);
-      const response = await axios.post("/api/lab-tests", data, { headers });
+      const response = await api.post("/lab-tests", data, { headers });
       return response.data.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
@@ -76,12 +77,13 @@ export const createLabTest = createAsyncThunk(
   }
 );
 
+// Update a lab test
 export const updateLabTest = createAsyncThunk(
   "labTests/update",
   async ({ id, updates }, { getState, rejectWithValue }) => {
     try {
       const headers = getAuthHeaders(getState);
-      const response = await axios.put(`/api/lab-tests/${id}`, updates, { headers });
+      const response = await api.put(`/lab-tests/${id}`, updates, { headers });
       return response.data.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
@@ -89,12 +91,13 @@ export const updateLabTest = createAsyncThunk(
   }
 );
 
+// Delete a lab test
 export const deleteLabTest = createAsyncThunk(
   "labTests/delete",
   async (id, { getState, rejectWithValue }) => {
     try {
       const headers = getAuthHeaders(getState);
-      await axios.delete(`/api/lab-tests/${id}`, { headers });
+      await api.delete(`/lab-tests/${id}`, { headers });
       return id;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
@@ -102,16 +105,14 @@ export const deleteLabTest = createAsyncThunk(
   }
 );
 
-// =====================
 // Slice
-// =====================
 const labTestsSlice = createSlice({
   name: "labTests",
   initialState,
   reducers: {
     setFilters(state, action) {
       state.filters = action.payload;
-      state.page = 1; // reset page when filters change
+      state.page = 1; 
     },
     setPage(state, action) {
       state.page = action.payload;
