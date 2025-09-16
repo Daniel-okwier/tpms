@@ -3,6 +3,9 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { restoreSession } from "@/redux/slices/authSlice";
 
+// Toast
+import ToastConfig from "@/components/ToastConfig";
+
 // Public pages
 import Login from "@/pages/Login";
 import Unauthorized from "@/pages/Unauthorized";
@@ -57,102 +60,103 @@ export default function App() {
   }
 
   return (
-    <Routes>
-      {/* Default route → Login */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
+    <>
+      <Routes>
+        {/* Default route → Login */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
 
-      {/* Public pages */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/unauthorized" element={<Unauthorized />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
+        {/* Public pages */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/unauthorized" element={<Unauthorized />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
 
-      {/* Protected routes inside MainLayout */}
-      <Route element={<MainLayout />}>
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute roles={["admin", "doctor", "nurse", "lab_staff"]}>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
+        {/* Protected routes inside MainLayout */}
+        <Route element={<MainLayout />}>
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute roles={["admin", "doctor", "nurse", "lab_staff"]}>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patients"
+            element={
+              <ProtectedRoute roles={["doctor", "nurse"]}>
+                <Patients />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patients/:id"
+            element={
+              <ProtectedRoute roles={["doctor", "nurse"]}>
+                <PatientDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/diagnosis"
+            element={
+              <ProtectedRoute roles={["doctor"]}>
+                <Diagnosis />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/labtests"
+            element={
+              <ProtectedRoute roles={["lab_staff"]}>
+                <LabTests />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/screenings"
+            element={
+              <ProtectedRoute roles={["doctor"]}>
+                <Screenings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/appointments"
+            element={
+              <ProtectedRoute roles={["doctor", "nurse"]}>
+                <Appointments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/treatments"
+            element={
+              <ProtectedRoute roles={["doctor"]}>
+                <Treatments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <Reports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manage-users"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <ManageUsers />
+              </ProtectedRoute>
+            }
+          />
+        </Route>
+      </Routes>
 
-        {/* Patient Management */}
-        <Route
-          path="/patients"
-          element={
-            <ProtectedRoute roles={["doctor", "nurse"]}>
-              <Patients />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/patients/:id"
-          element={
-            <ProtectedRoute roles={["doctor", "nurse"]}>
-              <PatientDetails />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Other Modules */}
-        <Route
-          path="/diagnosis"
-          element={
-            <ProtectedRoute roles={["doctor"]}>
-              <Diagnosis />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/labtests"
-          element={
-            <ProtectedRoute roles={["lab_staff"]}>
-              <LabTests />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/screenings"
-          element={
-            <ProtectedRoute roles={["doctor"]}>
-              <Screenings />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/appointments"
-          element={
-            <ProtectedRoute roles={["doctor", "nurse"]}>
-              <Appointments />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/treatments"
-          element={
-            <ProtectedRoute roles={["doctor"]}>
-              <Treatments />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/reports"
-          element={
-            <ProtectedRoute roles={["admin"]}>
-              <Reports />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/manage-users"
-          element={
-            <ProtectedRoute roles={["admin"]}>
-              <ManageUsers />
-            </ProtectedRoute>
-          }
-        />
-      </Route>
-    </Routes>
+      {/* Toast notifications */}
+      <ToastConfig />
+    </>
   );
 }
