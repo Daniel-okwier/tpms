@@ -1,66 +1,99 @@
-import { createSlice, createAsyncThunk, createEntityAdapter } from '@reduxjs/toolkit';
-import axios from 'axios';
+import { createSlice, createAsyncThunk, createEntityAdapter } from "@reduxjs/toolkit";
+import axios from "axios";
 
+// Entity adapter for normalized data
 const adapter = createEntityAdapter({
   selectId: (test) => test._id,
-  sortComparer: (a, b) => new Date(b.orderDate) - new Date(a.orderDate)
+  sortComparer: (a, b) => new Date(b.orderDate) - new Date(a.orderDate),
 });
 
+// Initial state
 const initialState = adapter.getInitialState({
-  loading: 'idle',
+  loading: "idle", // 'idle' | 'pending' | 'succeeded' | 'failed'
   error: null,
   total: 0,
   page: 1,
   limit: 12,
   filters: {
-    q: '',
-    testType: '',
-    status: ''
+    q: "",
+    testType: "",
+    status: "",
   },
-  sortBy: 'orderDate',
-  sortDir: 'desc'
+  sortBy: "orderDate",
+  sortDir: "desc",
 });
 
+// Helper to get auth headers
 const getAuthHeaders = (getState) => {
   const state = getState();
-  const token = state?.auth?.token || localStorage.getItem('token');
+  const token = state?.auth?.token || localStorage.getItem("token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-// Fetch lab tests
+
+// Async Thunks
+
+
+// Fetch lab tests with optional params
 export const fetchLabTests = createAsyncThunk(
-  'labTests/fetch',
-  async (_, { getState, rejectWithValue }) => {
+  "labTests/fetch",
+  async (opts = {}, { getState, rejectWithValue }) => {
     try {
       const state = getState();
       const params = {
-        page: state.labTests.page,
-        limit: state.labTests.limit,
-        q: state.labTests.filters.q || undefined,
-        testType: state.labTests.filters.testType || undefined,
-        status: state.labTests.filters.status || undefined,
-        sortBy: state.labTests.sortBy,
-        sortDir: state.labTests.sortDir
+        page: opts.page ?? state.labTests.page,
+        limit: opts.limit ?? state.labTests.limit,
+        q: opts.q ?? state.labTests.filters.q,
+        testType: opts.testType ?? state.labTests.filters.testType,
+        status: opts.status ?? state.labTests.filters.status,
+        sortBy: opts.sortBy ?? state.labTests.sortBy,
+        sortDir: opts.sortDir ?? state.labTests.sortDir,
       };
-      const res = await axios.get('/api/lab-tests', {
-        params,
-        headers: getAuthHeaders(getState)
-      });
-      return res.data;
+
+      const headers = getAuthHeaders(getState);
+      const response = await axios.get("/api/lab-tests", { params, headers });
+      return response.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
     }
   }
 );
 
-// Delete lab test
+// Create a new lab test
+export const createLabTest = createAsyncThunk(
+  "labTests/create",
+  async (data, { getState, rejectWithValue }) => {
+    try {
+      const headers = getAuthHeaders(getState);
+      const response = await axios.post("/api/lab-tests", data, { headers });
+      return response.data.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data || err.message);
+    }
+  }
+);
+
+// Update an existing lab test
+export const updateLabTest = createAsyncThunk(
+  "labTests/update",
+  async ({ id, updates }, { getState, rejectWithValue }) => {
+    try {
+      const headers = getAuthHeaders(getState);
+      const response = await axios.put(`/api/lab-tests/${id}`, updates, { headers });
+      return response.data.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data || err.message);
+    }
+  }
+);
+
+// Delete a lab test
 export const deleteLabTest = createAsyncThunk(
-  'labTests/delete',
+  "labTests/delete",
   async (id, { getState, rejectWithValue }) => {
     try {
-      await axios.delete(`/api/lab-tests/${id}`, {
-        headers: getAuthHeaders(getState)
-      });
+      const headers = getAuthHeaders(getState);
+      await axios.delete(`/api/lab-tests/${id}`, { headers });
       return id;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
@@ -68,45 +101,85 @@ export const deleteLabTest = createAsyncThunk(
   }
 );
 
+
+// Slice
+
 const labTestsSlice = createSlice({
-  name: 'labTests',
+  name: "labTests",
   initialState,
   reducers: {
-    resetFilters(state) {
-      state.filters = { q: '', testType: '', status: '' };
+    setFilters(state, action) {
+      state.filters = action.payload;
+      state.page = 1; 
     },
     setPage(state, action) {
       state.page = action.payload;
     },
-    setFilters(state, action) {
-      state.filters = action.payload;
-    }
   },
   extraReducers: (builder) => {
     builder
+      // Fetch
       .addCase(fetchLabTests.pending, (state) => {
-        state.loading = 'pending';
+        state.loading = "pending";
         state.error = null;
       })
       .addCase(fetchLabTests.fulfilled, (state, action) => {
-        state.loading = 'succeeded';
+        state.loading = "succeeded";
         adapter.setAll(state, action.payload.data);
-        state.total = action.payload.total;
+        state.total = action.payload.count;
       })
       .addCase(fetchLabTests.rejected, (state, action) => {
-        state.loading = 'failed';
-        state.error = action.payload || action.error.message;
+        state.loading = "failed";
+        state.error = action.payload;
+      })
+
+      // Create
+      .addCase(createLabTest.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(createLabTest.fulfilled, (state, action) => {
+        state.loading = "succeeded";
+        adapter.addOne(state, action.payload);
+      })
+      .addCase(createLabTest.rejected, (state, action) => {
+        state.loading = "failed";
+        state.error = action.payload;
+      })
+
+      // Update
+      .addCase(updateLabTest.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(updateLabTest.fulfilled, (state, action) => {
+        state.loading = "succeeded";
+        adapter.upsertOne(state, action.payload);
+      })
+      .addCase(updateLabTest.rejected, (state, action) => {
+        state.loading = "failed";
+        state.error = action.payload;
+      })
+
+      // Delete
+      .addCase(deleteLabTest.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
       })
       .addCase(deleteLabTest.fulfilled, (state, action) => {
+        state.loading = "succeeded";
         adapter.removeOne(state, action.payload);
-        state.total -= 1;
       })
       .addCase(deleteLabTest.rejected, (state, action) => {
-        state.error = action.payload || action.error.message;
+        state.loading = "failed";
+        state.error = action.payload;
       });
-  }
+  },
 });
 
-export const { resetFilters, setPage, setFilters } = labTestsSlice.actions;
+// Export actions and selectors
+export const { setFilters, setPage } = labTestsSlice.actions;
 export const labTestsSelectors = adapter.getSelectors((state) => state.labTests);
+
+
 export default labTestsSlice.reducer;
