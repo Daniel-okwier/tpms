@@ -1,64 +1,74 @@
-import Patient from '../models/patient.js';
-import ErrorResponse from '../utils/errorResponse.js';
+import Patient from "../models/patient.js";
 
-// Create a new patient
+// Create new patient
 export const createPatientService = async (data, user) => {
-  try {
-    return await Patient.create({ ...data, createdBy: user._id });
-  } catch (err) {
-    // Handle duplicate MRN error
-    if (err.code === 11000 && err.keyValue.mrn) {
-      throw new ErrorResponse(`MRN "${err.keyValue.mrn}" already exists`, 400);
-    }
-    throw err;
-  }
+  
+  const { mrn, ...rest } = data;
+  const patient = await Patient.create({ ...rest, createdBy: user._id });
+  return patient;
 };
 
-// Get all active patients
-export const getActivePatientsService = async () => {
-  return await Patient.find({ archived: false }).populate('createdBy', 'name email role');
+
+// Get active patients with pagination
+export const getActivePatientsService = async (page = 1, limit = 20) => {
+  const patients = await Patient.find({ archived: false })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .sort({ createdAt: -1 });
+  const total = await Patient.countDocuments({ archived: false });
+  return { patients, total, page, pages: Math.ceil(total / limit) };
 };
 
-// Search patient by MRN (exact) or Name (partial)
-export const searchPatientService = async ({ mrn, name }) => {
-  let query = { archived: false };
 
-  if (mrn) {
-    query.mrn = mrn; // exact match
-    const patient = await Patient.findOne(query).populate('createdBy', 'name email role');
-    if (!patient) throw new ErrorResponse('Patient not found', 404);
-    return patient; // single patient if MRN is used
-  } 
+// Search patient by MRN, name, or phone
+
+
+export const searchPatientService = async ({ mrn, name, phone }) => {
+  const query = { archived: false };
+
+  if (mrn) query.mrn = mrn;
+  if (phone) query["contactInfo.phone"] = phone;
 
   if (name) {
-    // partial match on firstName or lastName
-    query.$or = [
-      { firstName: { $regex: name, $options: 'i' } },
-      { lastName: { $regex: name, $options: 'i' } }
-    ];
-    const patients = await Patient.find(query).populate('createdBy', 'name email role');
-    if (patients.length === 0) throw new ErrorResponse('No patients found', 404);
-    return patients; // array of matching patients
+    const parts = name.trim().split(/\s+/);
+
+    if (parts.length === 1) {
+      // Single word → match either first OR last name
+      query.$or = [
+        { firstName: new RegExp(parts[0], "i") },
+        { lastName: new RegExp(parts[0], "i") },
+      ];
+    } else if (parts.length >= 2) {
+      // Two+ words → try to match first + last combo
+      const first = parts[0];
+      const last = parts.slice(1).join(" "); // in case of compound last names
+      query.$and = [
+        { firstName: new RegExp(first, "i") },
+        { lastName: new RegExp(last, "i") },
+      ];
+    }
   }
 
-  throw new ErrorResponse('Please provide MRN or name to search', 400);
+  return await Patient.find(query).limit(20);
 };
+
+
 
 // Update patient
 export const updatePatientService = async (id, updates) => {
-  const patient = await Patient.findOneAndUpdate({ _id: id, archived: false }, updates, { new: true });
-  if (!patient) throw new ErrorResponse('Patient not found or archived', 404);
+  const patient = await Patient.findByIdAndUpdate(id, updates, { new: true });
+  if (!patient) throw new Error("Patient not found");
   return patient;
 };
 
-// Archive (soft delete) a patient
+// Archive patient (soft delete)
 export const archivePatientService = async (id) => {
   const patient = await Patient.findByIdAndUpdate(id, { archived: true }, { new: true });
-  if (!patient) throw new ErrorResponse('Patient not found', 404);
+  if (!patient) throw new Error("Patient not found");
   return patient;
 };
 
-// Get all archived patients
+// Get archived patients
 export const getArchivedPatientsService = async () => {
-  return await Patient.find({ archived: true }).populate('createdBy', 'name email role');
+  return await Patient.find({ archived: true });
 };

@@ -1,57 +1,57 @@
-import asyncHandler from '../middleware/asyncHandler.js';
+import asyncHandler from "../middleware/asyncHandler.js";
 import {
   createPatientService,
   getActivePatientsService,
   searchPatientService,
   updatePatientService,
   archivePatientService,
-  getArchivedPatientsService
-} from '../services/patientService.js';
+  getArchivedPatientsService,
+} from "../services/patientService.js";
 
 // Create new patient
-// @route   POST /api/patients
-// @access  Doctor/Nurse/Admin
+// POST /api/patients
 export const createPatient = asyncHandler(async (req, res) => {
   const patient = await createPatientService(req.body, req.user);
   res.status(201).json({ success: true, data: patient });
 });
 
-// Get all active patients
-// @route   GET /api/patients
-// @access  Doctor/Nurse/Admin
+// Get all active patients (with pagination)
+// GET /api/patients?page=1&limit=20
 export const getPatients = asyncHandler(async (req, res) => {
-  const patients = await getActivePatientsService();
+  const { page = 1, limit = 20 } = req.query;
+  const result = await getActivePatientsService(Number(page), Number(limit));
+  res.json({ success: true, ...result });
+});
+
+// Search patients by MRN, name, or phone
+// GET /api/patients/search?name=John
+export const searchPatient = asyncHandler(async (req, res) => {
+  const patients = await searchPatientService(req.query);
   res.json({ success: true, data: patients });
 });
 
-// Search patient by MRN (exact) or Name (partial)
-// @route   GET /api/patients/search
-// @access  Doctor/Nurse/Admin/Patient
-export const searchPatient = asyncHandler(async (req, res) => {
-  const patient = await searchPatientService(req.query);
-  res.json({ success: true, data: patient });
-});
-
 // Update patient
-// @route   PUT /api/patients/:id
-// @access  Doctor/Admin
+// PUT /api/patients/:id
 export const updatePatient = asyncHandler(async (req, res) => {
   const patient = await updatePatientService(req.params.id, req.body);
   res.json({ success: true, data: patient });
 });
 
 // Archive patient (soft delete)
-// @route   DELETE /api/patients/:id
-// @access  Admin
+// DELETE /api/patients/:id
 export const archivePatient = asyncHandler(async (req, res) => {
   const patient = await archivePatientService(req.params.id);
-  res.json({ success: true, message: 'Patient archived successfully', data: patient });
+  res.json({
+    success: true,
+    message: "Patient archived successfully",
+    data: patient,
+  });
 });
 
-// Get all archived patients
-// @route   GET /api/patients/archived
-// @access  Doctor/Admin
+// Get archived patients (with pagination)
+// GET /api/patients/archived?page=1&limit=20
 export const getArchivedPatients = asyncHandler(async (req, res) => {
-  const patients = await getArchivedPatientsService();
-  res.json({ success: true, data: patients });
+  const { page = 1, limit = 20 } = req.query;
+  const result = await getArchivedPatientsService(Number(page), Number(limit));
+  res.json({ success: true, ...result });
 });
