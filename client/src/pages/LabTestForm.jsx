@@ -19,28 +19,29 @@ const LabTestForm = ({ existingTest, patients = [], onClose }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+ const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!formData.patient) {
-      toast.error("Please select a patient");
-      return;
-    }
+  if (!formData.patient) {
+    toast.error("Please select a patient");
+    return;
+  }
 
-    try {
-      if (existingTest) {
-        await dispatch(updateLabTest({ id: existingTest._id, data: formData })).unwrap();
-        toast.success("Lab test updated successfully");
-      } else {
-        await dispatch(createLabTest(formData)).unwrap();
-        toast.success("Lab test created successfully");
-      }
-      dispatch(fetchLabTests());
-      onClose();
-    } catch (err) {
-      toast.error(err.message || "Failed to save lab test");
+  try {
+    if (existingTest) {
+      await dispatch(updateLabTest({ id: existingTest._id, updates: formData })).unwrap();
+      toast.success("Lab test updated successfully");
+    } else {
+      await dispatch(createLabTest(formData)).unwrap();
+      toast.success("Lab test created successfully");
     }
-  };
+    dispatch(fetchLabTests());
+    onClose();
+  } catch (err) {
+    toast.error(err.message || "Failed to save lab test");
+  }
+};
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

@@ -10,10 +10,12 @@ const LabTestsPage = () => {
   const dispatch = useDispatch();
 
   // Lab tests
-  const { entities: labTests } = useSelector((state) => state.labTests);
+  const { entities: labTests, loading, error } = useSelector(
+    (state) => state.labTests
+  );
 
-  // Patients (fixed: now using items from slice, not entities)
-  const patients = useSelector((state) => state.patients.items);
+  // Patients
+  const patients = useSelector((state) => state.patients.items || []);
 
   const [showForm, setShowForm] = useState(false);
   const [selectedTest, setSelectedTest] = useState(null);
@@ -27,7 +29,7 @@ const LabTestsPage = () => {
 
   useEffect(() => {
     dispatch(fetchLabTests());
-    dispatch(fetchPatients({ page: 1, limit: 100 })); // fetch patients for dropdown
+    dispatch(fetchPatients({ page: 1, limit: 100 }));
   }, [dispatch]);
 
   const handleDelete = async (id) => {
@@ -42,12 +44,18 @@ const LabTestsPage = () => {
     }
   };
 
+  const handleEdit = (test) => {
+    setSelectedTest(test);
+    setShowForm(true);
+  };
+
   const filteredLabTests = Object.values(labTests || {}).filter((test) => {
     return (
       (!filters.q ||
         test.patient?.firstName?.toLowerCase().includes(filters.q.toLowerCase()) ||
         test.patient?.lastName?.toLowerCase().includes(filters.q.toLowerCase()) ||
-        test.patient?.mrn?.includes(filters.q)) &&
+        test.patient?.mrn?.includes(filters.q) ||
+        test.patientId?.toLowerCase().includes(filters.q.toLowerCase())) &&
       (!filters.testType || test.testType === filters.testType) &&
       (!filters.status || test.status === filters.status)
     );
@@ -55,7 +63,7 @@ const LabTestsPage = () => {
 
   return (
     <div className="p-4">
-      {/* Dashboard Title and New Button */}
+      {/* Title + New button */}
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold text-white">Lab Tests</h1>
         <button
@@ -73,7 +81,7 @@ const LabTestsPage = () => {
       <div className="flex gap-2 mb-4 flex-wrap">
         <input
           type="text"
-          placeholder="Search patient"
+          placeholder="Search by patient name, MRN, or ID"
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
           className="border px-2 py-1 rounded text-black"
@@ -105,64 +113,84 @@ const LabTestsPage = () => {
         </select>
       </div>
 
-      {/* Lab Tests Table */}
+      {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full table-auto border border-gray-300">
+        <table className="w-full table-auto border border-gray-300 bg-white text-black rounded-lg shadow-md">
           <thead>
-            <tr className="bg-gray-200 text-black">
-              <th className="border px-2 py-1">Patient</th>
-              <th className="border px-2 py-1">MRN</th>
-              <th className="border px-2 py-1">Test Type</th>
-              <th className="border px-2 py-1">Status</th>
-              <th className="border px-2 py-1">Priority</th>
-              <th className="border px-2 py-1">Actions</th>
+            <tr className="bg-gray-100 text-gray-700">
+              <th className="border px-2 py-2 text-left">Patient</th>
+              <th className="border px-2 py-2 text-left">MRN</th>
+              <th className="border px-2 py-2 text-left">Test Type</th>
+              <th className="border px-2 py-2 text-left">Status</th>
+              <th className="border px-2 py-2 text-left">Priority</th>
+              <th className="border px-2 py-2 text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredLabTests.map((test) => (
-              <tr key={test._id} className="hover:bg-gray-100">
-                <td className="border px-2 py-1 text-black">
-                  {test.patient?.firstName} {test.patient?.lastName}
-                </td>
-                <td className="border px-2 py-1 text-black">{test.patient?.mrn}</td>
-                <td className="border px-2 py-1 text-black">{test.testType}</td>
-                <td className="border px-2 py-1 text-black">{test.status}</td>
-                <td className="border px-2 py-1 text-black">{test.priority}</td>
-                <td className="border px-2 py-1 flex gap-2">
-                  <button
-                    onClick={() => {
-                      setSelectedTest(test);
-                      setShowForm(true);
-                    }}
-                    className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(test._id)}
-                    className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                  >
-                    Delete
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedTest(test);
-                      setShowDetail(true);
-                    }}
-                    className="px-2 py-1 bg-gray-600 text-white rounded hover:bg-gray-700"
-                  >
-                    Details
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {filteredLabTests.length === 0 && (
+            {loading === "pending" && (
               <tr>
-                <td colSpan="6" className="text-center text-black py-4">
-                  No lab tests found
+                <td colSpan="6" className="text-center py-4">
+                  Loading lab tests...
                 </td>
               </tr>
             )}
+
+            {error && (
+              <tr>
+                <td colSpan="6" className="text-center text-red-500 py-4">
+                  {typeof error === "string" ? error : "Failed to load lab tests"}
+                </td>
+              </tr>
+            )}
+
+            {loading === "succeeded" &&
+              !error &&
+              filteredLabTests.map((test) => (
+                <tr key={test._id} className="border-b hover:bg-gray-50">
+                  <td className="px-4 py-2">
+                    {test.patient
+                      ? `${test.patient.firstName} ${test.patient.lastName}`
+                      : test.patientId || "N/A"}
+                  </td>
+                  <td className="px-4 py-2">{test.patient?.mrn || "N/A"}</td>
+                  <td className="px-4 py-2">{test.testType}</td>
+                  <td className="px-4 py-2">{test.status}</td>
+                  <td className="px-4 py-2">{test.priority}</td>
+                  <td className="px-4 py-2 flex gap-2 justify-center">
+                    <button
+                      onClick={() => handleEdit(test)}
+                      className="px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600 shadow"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(test._id)}
+                      className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600 shadow"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedTest(test);
+                        setShowDetail(true);
+                      }}
+                      className="px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 shadow"
+                    >
+                      Details
+                    </button>
+                  </td>
+                </tr>
+              ))}
+
+            {loading === "succeeded" &&
+              !error &&
+              filteredLabTests.length === 0 && (
+                <tr>
+                  <td colSpan="6" className="text-center py-4">
+                    No lab tests found
+                  </td>
+                </tr>
+              )}
           </tbody>
         </table>
       </div>
@@ -177,10 +205,7 @@ const LabTestsPage = () => {
       )}
 
       {showDetail && (
-        <LabTestDetail
-          test={selectedTest}
-          onClose={() => setShowDetail(false)}
-        />
+        <LabTestDetail test={selectedTest} onClose={() => setShowDetail(false)} />
       )}
     </div>
   );

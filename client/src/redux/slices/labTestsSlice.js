@@ -1,6 +1,5 @@
-// src/redux/slices/labTestsSlice.js
 import { createSlice, createAsyncThunk, createEntityAdapter } from "@reduxjs/toolkit";
-import api from "@/utils/axios"; // ✅ use the custom axios instance
+import api from "@/utils/axios";
 
 // Entity adapter for normalized data
 const adapter = createEntityAdapter({
@@ -31,7 +30,6 @@ const getAuthHeaders = (getState) => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-
 // Async Thunks
 
 // Fetch lab tests
@@ -53,10 +51,17 @@ export const fetchLabTests = createAsyncThunk(
       const headers = getAuthHeaders(getState);
       const response = await api.get("/lab-tests", { params, headers });
 
-      return {
-        data: response.data?.data || [],
-        count: response.data?.count ?? 0,
-      };
+      // Normalize response
+      const records =
+        response.data?.data ||
+        response.data?.labTests ||
+        response.data ||
+        [];
+      const count =
+        response.data?.count ??
+        (Array.isArray(records) ? records.length : 0);
+
+      return { data: records, count };
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
     }
@@ -70,7 +75,7 @@ export const createLabTest = createAsyncThunk(
     try {
       const headers = getAuthHeaders(getState);
       const response = await api.post("/lab-tests", data, { headers });
-      return response.data.data;
+      return response.data?.data || response.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
     }
@@ -84,7 +89,7 @@ export const updateLabTest = createAsyncThunk(
     try {
       const headers = getAuthHeaders(getState);
       const response = await api.put(`/lab-tests/${id}`, updates, { headers });
-      return response.data.data;
+      return response.data?.data || response.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
     }
@@ -112,7 +117,7 @@ const labTestsSlice = createSlice({
   reducers: {
     setFilters(state, action) {
       state.filters = action.payload;
-      state.page = 1; 
+      state.page = 1;
     },
     setPage(state, action) {
       state.page = action.payload;
@@ -127,8 +132,9 @@ const labTestsSlice = createSlice({
       })
       .addCase(fetchLabTests.fulfilled, (state, action) => {
         state.loading = "succeeded";
-        adapter.setAll(state, action.payload.data || []);
-        state.total = action.payload.count ?? action.payload.data.length;
+        const records = action.payload.data || [];
+        adapter.setAll(state, records);
+        state.total = action.payload.count ?? records.length;
       })
       .addCase(fetchLabTests.rejected, (state, action) => {
         state.loading = "failed";
@@ -136,45 +142,21 @@ const labTestsSlice = createSlice({
       })
 
       // Create
-      .addCase(createLabTest.pending, (state) => {
-        state.loading = "pending";
-        state.error = null;
-      })
       .addCase(createLabTest.fulfilled, (state, action) => {
         state.loading = "succeeded";
         if (action.payload) adapter.addOne(state, action.payload);
       })
-      .addCase(createLabTest.rejected, (state, action) => {
-        state.loading = "failed";
-        state.error = action.payload;
-      })
 
       // Update
-      .addCase(updateLabTest.pending, (state) => {
-        state.loading = "pending";
-        state.error = null;
-      })
       .addCase(updateLabTest.fulfilled, (state, action) => {
         state.loading = "succeeded";
         if (action.payload) adapter.upsertOne(state, action.payload);
       })
-      .addCase(updateLabTest.rejected, (state, action) => {
-        state.loading = "failed";
-        state.error = action.payload;
-      })
 
       // Delete
-      .addCase(deleteLabTest.pending, (state) => {
-        state.loading = "pending";
-        state.error = null;
-      })
       .addCase(deleteLabTest.fulfilled, (state, action) => {
         state.loading = "succeeded";
         adapter.removeOne(state, action.payload);
-      })
-      .addCase(deleteLabTest.rejected, (state, action) => {
-        state.loading = "failed";
-        state.error = action.payload;
       });
   },
 });
