@@ -21,6 +21,6 @@ router
   .route('/:id')
   .get(protect, authorizeRoles('admin', 'doctor', 'nurse', 'lab_staff', 'patient'), getLabTestById)
   .put(protect, authorizeRoles('lab_staff', 'doctor'), updateLabTest)
-  .delete(protect, authorizeRoles('admin'), deleteLabTest);
+  .delete(protect, authorizeRoles('lab_staff'), deleteLabTest);
 
 export default router;
