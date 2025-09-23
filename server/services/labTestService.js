@@ -18,20 +18,27 @@ export const createLabTestService = async (data, user) => {
 export const getLabTestsService = async (filters = {}) => {
   const query = {};
 
-  if (filters.q) {
-    query.$or = [
-      { 'patient.firstName': { $regex: filters.q, $options: 'i' } },
-      { 'patient.lastName': { $regex: filters.q, $options: 'i' } },
-      { 'patient.mrn': { $regex: filters.q, $options: 'i' } },
-    ];
-  }
   if (filters.status) query.status = filters.status;
   if (filters.testType) query.testType = filters.testType;
 
-  return await LabTest.find(query)
+  let tests = await LabTest.find(query)
     .populate('patient', 'firstName lastName mrn')
     .populate('orderedBy', 'name role')
     .sort({ orderDate: -1 });
+
+  // Apply search filter after population (since patient is a reference)
+  if (filters.q) {
+    const q = filters.q.toLowerCase();
+    tests = tests.filter(
+      (t) =>
+        t.patient?.firstName?.toLowerCase().includes(q) ||
+        t.patient?.lastName?.toLowerCase().includes(q) ||
+        t.patient?.mrn?.toLowerCase().includes(q) ||
+        t.patient?._id?.toString().includes(q)
+    );
+  }
+
+  return tests;
 };
 
 export const getLabTestByIdService = async (id, user) => {
@@ -64,9 +71,7 @@ export const updateLabTestService = async (id, updates, user) => {
 };
 
 export const deleteLabTestService = async (id) => {
-  const test = await LabTest.findById(id);
+  const test = await LabTest.findByIdAndDelete(id);
   if (!test) throw new ErrorResponse('Lab test not found', 404);
-
-  await test.remove();
   return test;
 };
