@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
 
 const symptomSchema = new mongoose.Schema({
-  coughWeeks: { type: Number, default: 0 },        // cough duration
+  coughWeeks: { type: Number, default: 0 },        
   fever: { type: Boolean, default: false },
   nightSweats: { type: Boolean, default: false },
   weightLoss: { type: Boolean, default: false },
-  hemoptysis: { type: Boolean, default: false },    // coughing blood
+  hemoptysis: { type: Boolean, default: false },    
 }, { _id: false });
 
 const riskSchema = new mongoose.Schema({
