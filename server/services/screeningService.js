@@ -1,4 +1,4 @@
-import Screening from '../models/Screening.js';
+import Screening from '../models/screening.js';
 
 // Create screening
 export const createScreeningService = async ({ data, userId }) => {
@@ -14,26 +14,32 @@ export const getScreeningsService = async (user, query) => {
   const filter = {};
 
   if (user.role === 'patient') {
-    filter.patient = user._id; // patient can only see their own screenings
+    // ⚠️ Adjust this once you properly link User ↔ Patient
+    filter.patient = user.linkedPatient || user._id;
   }
 
-  if (query.status) {
-    filter.status = query.status;
-  }
+  if (query.status) filter.screeningOutcome = query.status;
+  if (query.facility) filter.facilityName = query.facility;
 
-  return await Screening.find(filter).populate('patient createdBy');
+  return await Screening.find(filter)
+    .populate('patient', 'mrn firstName lastName age gender')
+    .populate('createdBy', 'name role email')
+    .sort({ screeningDate: -1 });
 };
 
 // Get single screening by ID
 export const getScreeningByIdService = async (id, user) => {
-  const screening = await Screening.findById(id).populate('patient createdBy');
+  const screening = await Screening.findById(id)
+    .populate('patient', 'mrn firstName lastName age gender')
+    .populate('createdBy', 'name role email');
 
-  if (!screening) {
-    throw new Error('Screening not found');
-  }
+  if (!screening) throw new Error('Screening not found');
 
-  if (user.role === 'patient' && screening.patient.toString() !== user._id.toString()) {
-    throw new Error('Unauthorized access to screening');
+  if (user.role === 'patient') {
+    const patientId = user.linkedPatient || user._id;
+    if (screening.patient._id.toString() !== patientId.toString()) {
+      throw new Error('Unauthorized access to screening');
+    }
   }
 
   return screening;
@@ -51,9 +57,10 @@ export const voidScreeningService = async (id, reason, voidedBy) => {
   const screening = await Screening.findById(id);
   if (!screening) throw new Error('Screening not found');
 
-  screening.isVoided = true;
+  screening.voided = true;  // ✅ fixed field
   screening.voidReason = reason;
   screening.voidedBy = voidedBy;
+  screening.voidedAt = Date.now();
 
   await screening.save();
   return screening;
@@ -61,5 +68,7 @@ export const voidScreeningService = async (id, reason, voidedBy) => {
 
 // Get screenings for a specific patient
 export const getScreeningsByPatientService = async (patientId) => {
-  return await Screening.find({ patient: patientId }).populate('createdBy');
+  return await Screening.find({ patient: patientId, voided: false })
+    .populate('createdBy', 'name role email')
+    .sort({ screeningDate: -1 });
 };
