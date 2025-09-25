@@ -1,122 +1,132 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchScreenings, deleteScreening } from "../redux/screeningsSlice";
-import { toast } from "react-toastify";
 import {
-  Eye,
-  Edit,
-  Trash2
-} from "lucide-react";
+  fetchScreenings,
+  deleteScreening,
+  screeningsSelectors,
+} from "@/redux/slices/screeningsSlice";
+import { toast } from "react-toastify";
+import { Button } from "@/components/ui/button";
+import { Loader2, Trash2, Eye, Edit } from "lucide-react";
 
 const ScreeningDashboard = () => {
   const dispatch = useDispatch();
-  const { screenings, loading, error } = useSelector((state) => state.screenings);
 
+  // Normalized selectors
+  const screenings = useSelector(screeningsSelectors.selectAll);
+  const loading = useSelector((state) => state.screenings.loading);
+  const error = useSelector((state) => state.screenings.error);
+
+  // Load screenings on mount
   useEffect(() => {
     dispatch(fetchScreenings());
   }, [dispatch]);
 
+  // Handle delete/void
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to void this screening?")) {
-      try {
-        await dispatch(deleteScreening(id)).unwrap();
-        toast.success("Screening voided successfully");
-      } catch (err) {
-        toast.error(err || "Failed to void screening");
-      }
+    try {
+      await dispatch(deleteScreening(id)).unwrap();
+      toast.success("Screening record voided successfully");
+    } catch (err) {
+      toast.error(err || "Failed to void screening");
     }
   };
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Screening Dashboard</h2>
+      <h2 className="text-2xl font-semibold mb-6">Screenings</h2>
 
-      {loading && <p className="text-gray-500">Loading screenings...</p>}
-      {error && <p className="text-red-500">{error}</p>}
+      {/* Loading */}
+      {loading === "pending" && (
+        <div className="flex justify-center items-center py-10">
+          <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+        </div>
+      )}
 
-      <div className="overflow-x-auto shadow-lg rounded-lg">
-        <table className="min-w-full bg-white rounded-lg overflow-hidden">
-          <thead className="bg-gray-100 text-gray-700 uppercase text-sm">
-            <tr>
-              <th className="py-3 px-6 text-left">Patient</th>
-              <th className="py-3 px-6 text-left">MRN</th>
-              <th className="py-3 px-6 text-left">Screening Date</th>
-              <th className="py-3 px-6 text-left">Facility</th>
-              <th className="py-3 px-6 text-left">Outcome</th>
-              <th className="py-3 px-6 text-left">Created By</th>
-              <th className="py-3 px-6 text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="text-gray-800">
-            {screenings.length > 0 ? (
-              screenings.map((screening) => (
-                <tr
-                  key={screening._id}
-                  className="border-b hover:bg-gray-50 transition"
-                >
-                  <td className="py-3 px-6">
+      {/* Error */}
+      {error && (
+        <div className="text-red-500 text-center mb-4">
+          Error: {error}
+        </div>
+      )}
+
+      {/* Table */}
+      {loading !== "pending" && screenings.length > 0 ? (
+        <div className="overflow-x-auto bg-white rounded-xl shadow-md">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase">
+                  Patient
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase">
+                  Screening Type
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase">
+                  Result
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-center text-sm font-medium text-gray-700 uppercase">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 text-black">
+              {screenings.map((screening) => (
+                <tr key={screening._id} className="hover:bg-gray-50 transition">
+                  <td className="px-6 py-4 whitespace-nowrap">
                     {screening.patient?.firstName} {screening.patient?.lastName}
                   </td>
-                  <td className="py-3 px-6">{screening.patient?.mrn}</td>
-                  <td className="py-3 px-6">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {screening.screeningType}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {screening.result}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     {new Date(screening.screeningDate).toLocaleDateString()}
                   </td>
-                  <td className="py-3 px-6">{screening.facilityName}</td>
-                  <td className="py-3 px-6">
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                        screening.screeningOutcome === "suspected_tb"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-green-100 text-green-700"
-                      }`}
-                    >
-                      {screening.screeningOutcome === "suspected_tb"
-                        ? "Suspected TB"
-                        : "Not Suspected"}
-                    </span>
-                  </td>
-                  <td className="py-3 px-6">{screening.createdBy?.name}</td>
-                  <td className="py-3 px-6 text-center flex justify-center gap-3">
+                  <td className="px-6 py-4 whitespace-nowrap text-center space-x-2">
                     {/* Details */}
-                    <button
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg shadow-md flex items-center gap-1"
-                      title="View Details"
+                    <Button
+                      size="sm"
+                      className="bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow"
                     >
-                      <Eye size={18} />
-                    </button>
+                      <Eye className="w-4 h-4" />
+                    </Button>
 
                     {/* Edit */}
-                    <button
-                      className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg shadow-md flex items-center gap-1"
-                      title="Edit Screening"
+                    <Button
+                      size="sm"
+                      className="bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow"
                     >
-                      <Edit size={18} />
-                    </button>
+                      <Edit className="w-4 h-4" />
+                    </Button>
 
-                    {/* Delete / Void */}
-                    <button
+                    {/* Delete */}
+                    <Button
+                      size="sm"
                       onClick={() => handleDelete(screening._id)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg shadow-md flex items-center gap-1"
-                      title="Void Screening"
+                      className="bg-red-500 hover:bg-red-600 text-white rounded-lg shadow"
                     >
-                      <Trash2 size={18} />
-                    </button>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan="7"
-                  className="py-6 text-center text-gray-500 italic"
-                >
-                  No screenings found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        loading !== "pending" &&
+        !error && (
+          <div className="text-center text-gray-600 py-10">
+            No screening records found.
+          </div>
+        )
+      )}
     </div>
   );
 };
