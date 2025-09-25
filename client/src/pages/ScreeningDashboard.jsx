@@ -1,132 +1,183 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchScreenings,
   deleteScreening,
+  setFilters,
+  setPage,
   screeningsSelectors,
-} from "@/redux/slices/screeningsSlice";
-import { toast } from "react-toastify";
+} from "@/redux/screeningsSlice";
 import { Button } from "@/components/ui/button";
-import { Loader2, Trash2, Eye, Edit } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 const ScreeningDashboard = () => {
   const dispatch = useDispatch();
-
-  // Normalized selectors
   const screenings = useSelector(screeningsSelectors.selectAll);
-  const loading = useSelector((state) => state.screenings.loading);
-  const error = useSelector((state) => state.screenings.error);
+  const { loading, error, page, limit, total, filters } = useSelector(
+    (state) => state.screenings
+  );
 
-  // Load screenings on mount
+  const [search, setSearch] = useState(filters.q || "");
+  const [outcome, setOutcome] = useState(filters.outcome || "");
+
   useEffect(() => {
-    dispatch(fetchScreenings());
-  }, [dispatch]);
+    dispatch(fetchScreenings({ page, ...filters }));
+  }, [dispatch, page, filters]);
 
-  // Handle delete/void
   const handleDelete = async (id) => {
     try {
       await dispatch(deleteScreening(id)).unwrap();
-      toast.success("Screening record voided successfully");
+      toast.success("Screening voided successfully");
     } catch (err) {
       toast.error(err || "Failed to void screening");
     }
   };
 
+  const handleFilterApply = () => {
+    dispatch(setFilters({ q: search, outcome }));
+    dispatch(setPage(1));
+  };
+
+  const handleReset = () => {
+    setSearch("");
+    setOutcome("");
+    dispatch(setFilters({ q: "", outcome: "" }));
+    dispatch(setPage(1));
+  };
+
+  const renderOutcomeBadge = (status) => {
+    if (status === "suspected_tb") {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+          Suspected TB
+        </span>
+      );
+    }
+    if (status === "not_suspected") {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+          Not Suspected
+        </span>
+      );
+    }
+    return (
+      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+        Unknown
+      </span>
+    );
+  };
+
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-semibold mb-6">Screenings</h2>
+      <h1 className="text-2xl font-bold mb-4">Screenings Dashboard</h1>
 
-      {/* Loading */}
-      {loading === "pending" && (
-        <div className="flex justify-center items-center py-10">
-          <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-        </div>
-      )}
+      {/* Filters */}
+      <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
+        <input
+          type="text"
+          placeholder="Search by patient name or MRN"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="border rounded-md p-2 flex-1"
+        />
 
-      {/* Error */}
-      {error && (
-        <div className="text-red-500 text-center mb-4">
-          Error: {error}
-        </div>
-      )}
+        <select
+          value={outcome}
+          onChange={(e) => setOutcome(e.target.value)}
+          className="border rounded-md p-2"
+        >
+          <option value="">All Outcomes</option>
+          <option value="suspected_tb">Suspected TB</option>
+          <option value="not_suspected">Not Suspected</option>
+        </select>
+
+        <Button onClick={handleFilterApply} className="bg-blue-600 text-white">
+          Apply
+        </Button>
+        <Button onClick={handleReset} variant="outline">
+          Reset
+        </Button>
+      </div>
 
       {/* Table */}
-      {loading !== "pending" && screenings.length > 0 ? (
-        <div className="overflow-x-auto bg-white rounded-xl shadow-md">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+      <div className="overflow-x-auto bg-white shadow rounded-lg">
+        <table className="w-full border-collapse">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="px-4 py-2 text-left">Patient</th>
+              <th className="px-4 py-2 text-left">MRN</th>
+              <th className="px-4 py-2 text-left">Date</th>
+              <th className="px-4 py-2 text-left">Outcome</th>
+              <th className="px-4 py-2 text-left">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading === "pending" ? (
               <tr>
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase">
-                  Patient
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase">
-                  Screening Type
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase">
-                  Result
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-center text-sm font-medium text-gray-700 uppercase">
-                  Actions
-                </th>
+                <td colSpan="5" className="text-center py-4">
+                  Loading...
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 text-black">
-              {screenings.map((screening) => (
-                <tr key={screening._id} className="hover:bg-gray-50 transition">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {screening.patient?.firstName} {screening.patient?.lastName}
+            ) : screenings.length > 0 ? (
+              screenings.map((s) => (
+                <tr key={s._id} className="border-t">
+                  <td className="px-4 py-2">
+                    {s.patient?.firstName} {s.patient?.lastName}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {screening.screeningType}
+                  <td className="px-4 py-2">{s.patient?.mrn}</td>
+                  <td className="px-4 py-2">
+                    {new Date(s.screeningDate).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {screening.result}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {new Date(screening.screeningDate).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center space-x-2">
-                    {/* Details */}
+                  <td className="px-4 py-2">{renderOutcomeBadge(s.screeningOutcome)}</td>
+                  <td className="px-4 py-2 flex gap-2">
                     <Button
-                      size="sm"
-                      className="bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow"
+                      className="bg-yellow-500 text-white px-3 py-1 rounded-md"
                     >
-                      <Eye className="w-4 h-4" />
+                      Edit
                     </Button>
-
-                    {/* Edit */}
                     <Button
-                      size="sm"
-                      className="bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow"
+                      className="bg-red-500 text-white px-3 py-1 rounded-md"
+                      onClick={() => handleDelete(s._id)}
                     >
-                      <Edit className="w-4 h-4" />
+                      Delete
                     </Button>
-
-                    {/* Delete */}
-                    <Button
-                      size="sm"
-                      onClick={() => handleDelete(screening._id)}
-                      className="bg-red-500 hover:bg-red-600 text-white rounded-lg shadow"
-                    >
-                      <Trash2 className="w-4 h-4" />
+                    <Button className="bg-blue-500 text-white px-3 py-1 rounded-md">
+                      Details
                     </Button>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="5" className="text-center py-4">
+                  No screenings found
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-between items-center mt-4">
+        <p>
+          Page {page} of {Math.ceil(total / limit) || 1}
+        </p>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => dispatch(setPage(page - 1))}
+            disabled={page <= 1}
+          >
+            Prev
+          </Button>
+          <Button
+            onClick={() => dispatch(setPage(page + 1))}
+            disabled={page >= Math.ceil(total / limit)}
+          >
+            Next
+          </Button>
         </div>
-      ) : (
-        loading !== "pending" &&
-        !error && (
-          <div className="text-center text-gray-600 py-10">
-            No screening records found.
-          </div>
-        )
-      )}
+      </div>
     </div>
   );
 };
