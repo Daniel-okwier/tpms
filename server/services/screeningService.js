@@ -57,7 +57,7 @@ export const voidScreeningService = async (id, reason, voidedBy) => {
   const screening = await Screening.findById(id);
   if (!screening) throw new Error('Screening not found');
 
-  screening.voided = true;  // ✅ fixed field
+  screening.voided = true;  
   screening.voidReason = reason;
   screening.voidedBy = voidedBy;
   screening.voidedAt = Date.now();
@@ -66,9 +66,30 @@ export const voidScreeningService = async (id, reason, voidedBy) => {
   return screening;
 };
 
-// Get screenings for a specific patient
-export const getScreeningsByPatientService = async (patientId) => {
-  return await Screening.find({ patient: patientId, voided: false })
-    .populate('createdBy', 'name role email')
+// Get screenings 
+export const getScreeningsService = async (user, query) => {
+  const filter = {};
+
+  if (user.role === "patient") {
+    
+    filter.patient = user.linkedPatient || user._id;
+  }
+
+  if (query.status) filter.screeningOutcome = query.status;
+  if (query.facility) filter.facilityName = query.facility;
+
+ 
+  if (query.search) {
+    filter.$or = [
+      { "patient.mrn": { $regex: query.search, $options: "i" } },
+      { "patient.firstName": { $regex: query.search, $options: "i" } },
+      { "patient.lastName": { $regex: query.search, $options: "i" } },
+    ];
+  }
+
+  return await Screening.find(filter)
+    .populate("patient", "mrn firstName lastName age gender")
+    .populate("createdBy", "name role email")
     .sort({ screeningDate: -1 });
 };
+
