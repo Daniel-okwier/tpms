@@ -113,6 +113,20 @@ export const voidScreening = createAsyncThunk(
   }
 );
 
+// Hard delete screening
+export const deleteScreening = createAsyncThunk(
+  "screenings/delete",
+  async (id, { getState, rejectWithValue }) => {
+    try {
+      const headers = getAuthHeaders(getState);
+      await api.delete(`/screenings/${id}`, { headers });
+      return id;
+    } catch (err) {
+      return rejectWithValue(err.response?.data || err.message);
+    }
+  }
+);
+
 // Slice 
 const screeningsSlice = createSlice({
   name: "screenings",
@@ -157,6 +171,11 @@ const screeningsSlice = createSlice({
       // Void
       .addCase(voidScreening.fulfilled, (state, action) => {
         adapter.removeOne(state, action.payload._id || action.payload.id);
+      })
+
+      // Delete (hard delete)
+      .addCase(deleteScreening.fulfilled, (state, action) => {
+        adapter.removeOne(state, action.payload);
       });
   },
 });

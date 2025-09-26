@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect } from "react"; 
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { restoreSession } from "@/redux/slices/authSlice";
@@ -17,7 +17,7 @@ import Patients from "@/pages/ManagePatients";
 import PatientDetails from "@/pages/PatientDetails"; 
 import Diagnosis from "@/pages/Diagnosis";
 import LabTests from "@/pages/LabTests";
-import Screenings from "@/pages/Screenings";
+import ScreeningsDashboard from "@/pages/ScreeningsDashboard";   // ✅ updated import
 import Appointments from "@/pages/Appointments";
 import Treatments from "@/pages/Treatments";
 import Reports from "@/pages/Reports";
@@ -115,8 +115,8 @@ export default function App() {
           <Route
             path="/screenings"
             element={
-              <ProtectedRoute roles={["doctor"]}>
-                <Screenings />
+              <ProtectedRoute roles={["doctor", "nurse"]}> 
+                <ScreeningsDashboard />   {/* ✅ use new dashboard */}
               </ProtectedRoute>
             }
           />
