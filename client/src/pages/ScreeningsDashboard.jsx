@@ -1,26 +1,28 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchScreenings,
   deleteScreening,
   screeningsSelectors,
+  setFilters,
   setPage,
 } from "@/redux/slices/screeningSlice";
 import Button from "@/components/shared/Button";
-import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 
 const ScreeningDashboard = () => {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { loading, error, total, page, limit } = useSelector(
+  const { loading, error, total, page, limit, filters } = useSelector(
     (state) => state.screenings
   );
   const screenings = useSelector(screeningsSelectors.selectAll);
 
+  const [searchTerm, setSearchTerm] = useState(filters.search || "");
+
+  // Fetch data on mount and when filters/page change
   useEffect(() => {
-    dispatch(fetchScreenings({ page, limit }));
-  }, [dispatch, page, limit]);
+    dispatch(fetchScreenings({ page, limit, ...filters }));
+  }, [dispatch, page, limit, filters]);
 
   const handleDelete = async (id) => {
     try {
@@ -37,18 +39,49 @@ const ScreeningDashboard = () => {
     }
   };
 
+  const handleSearch = (e) => {
+    e.preventDefault();
+    dispatch(setFilters({ ...filters, search: searchTerm }));
+    dispatch(setPage(1));
+  };
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Screenings</h1>
-        <Button variant="primary" onClick={() => navigate("/screenings/create")}>
-          + New Screening
-        </Button>
+      {/* Header + Actions */}
+      <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
+        <h1 className="text-2xl font-bold text-gray-800">
+          Screening Dashboard
+        </h1>
+
+        <div className="flex items-center gap-2">
+          {/* Search Bar */}
+          <form onSubmit={handleSearch} className="flex">
+            <input
+              type="text"
+              placeholder="Search by MRN or name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-l-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+            <Button type="submit" variant="primary" size="sm" className="rounded-l-none">
+              Search
+            </Button>
+          </form>
+
+          {/* Add new */}
+          <Button
+            variant="primary"
+            onClick={() => toast("Add new screening clicked!")}
+          >
+            + New Screening
+          </Button>
+        </div>
       </div>
 
       {loading === "pending" && <p className="text-gray-500">Loading...</p>}
       {error && <p className="text-red-500">{error}</p>}
 
+      {/* Table */}
       <div className="overflow-x-auto bg-white shadow rounded-lg">
         <table className="min-w-full text-sm text-left">
           <thead className="bg-gray-100 text-gray-700 uppercase text-xs">
@@ -64,7 +97,10 @@ const ScreeningDashboard = () => {
           <tbody>
             {screenings.length === 0 ? (
               <tr>
-                <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                <td
+                  colSpan="6"
+                  className="px-6 py-4 text-center text-gray-500"
+                >
                   No screenings found
                 </td>
               </tr>
@@ -104,14 +140,14 @@ const ScreeningDashboard = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(`/screenings/${s._id}`)}
+                      onClick={() => toast("View details clicked!")}
                     >
                       Details
                     </Button>
                     <Button
                       variant="primary"
                       size="sm"
-                      onClick={() => navigate(`/screenings/${s._id}/edit`)}
+                      onClick={() => toast("Edit clicked!")}
                     >
                       Edit
                     </Button>
@@ -130,6 +166,7 @@ const ScreeningDashboard = () => {
         </table>
       </div>
 
+      {/* Pagination */}
       {total > limit && (
         <div className="flex justify-between items-center mt-6">
           <p className="text-sm text-gray-600">
