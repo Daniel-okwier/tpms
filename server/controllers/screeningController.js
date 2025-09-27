@@ -4,19 +4,21 @@ import {
   getScreeningByIdService,
   updateScreeningService,
   voidScreeningService,
-  getScreeningsByPatientService
-} from '../services/screeningService.js';
+  getScreeningsByPatientService,
+} from "../services/screeningService.js";
 
 // Create a screening
 export const createScreening = async (req, res) => {
   try {
     const screening = await createScreeningService({
       data: req.body,
-      userId: req.user._id
+      userId: req.user._id,
     });
     res.status(201).json({ success: true, data: screening });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to create screening' });
+    res
+      .status(500)
+      .json({ success: false, message: err.message || "Failed to create screening" });
   }
 };
 
@@ -26,7 +28,9 @@ export const getScreenings = async (req, res) => {
     const screenings = await getScreeningsService(req.user, req.query);
     res.json({ success: true, data: screenings });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to fetch screenings' });
+    res
+      .status(500)
+      .json({ success: false, message: err.message || "Failed to fetch screenings" });
   }
 };
 
@@ -36,7 +40,9 @@ export const getScreeningById = async (req, res) => {
     const screening = await getScreeningByIdService(req.params.id, req.user);
     res.json({ success: true, data: screening });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to fetch screening' });
+    res
+      .status(500)
+      .json({ success: false, message: err.message || "Failed to fetch screening" });
   }
 };
 
@@ -46,17 +52,25 @@ export const updateScreening = async (req, res) => {
     const screening = await updateScreeningService(req.params.id, req.body);
     res.json({ success: true, data: screening });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to update screening' });
+    res
+      .status(500)
+      .json({ success: false, message: err.message || "Failed to update screening" });
   }
 };
 
 // Void screening
 export const voidScreening = async (req, res) => {
   try {
-    const result = await voidScreeningService(req.params.id, req.body.reason, req.user._id);
+    const result = await voidScreeningService(
+      req.params.id,
+      req.body.reason,
+      req.user._id
+    );
     res.json({ success: true, data: result });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to void screening' });
+    res
+      .status(500)
+      .json({ success: false, message: err.message || "Failed to void screening" });
   }
 };
 
@@ -66,6 +80,9 @@ export const getScreeningsByPatient = async (req, res) => {
     const screenings = await getScreeningsByPatientService(req.params.patientId);
     res.json({ success: true, data: screenings });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || 'Failed to fetch patient screenings' });
+    res.status(500).json({
+      success: false,
+      message: err.message || "Failed to fetch patient screenings",
+    });
   }
 };

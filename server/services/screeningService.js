@@ -1,44 +1,58 @@
-import Screening from '../models/screening.js';
+import Screening from "../models/screening.js";
 
 // Create screening
 export const createScreeningService = async ({ data, userId }) => {
   const screening = new Screening({
     ...data,
-    createdBy: userId
+    createdBy: userId,
   });
   return await screening.save();
 };
 
-// Get screenings (staff see all, patients see their own)
+// Get screenings (staff see all, patients see their own, with search/filter)
 export const getScreeningsService = async (user, query) => {
   const filter = {};
 
-  if (user.role === 'patient') {
-    // ⚠️ Adjust this once you properly link User ↔ Patient
+  if (user.role === "patient") {
+    // ⚠️ Adjust this once User ↔ Patient is properly linked
     filter.patient = user.linkedPatient || user._id;
   }
 
   if (query.status) filter.screeningOutcome = query.status;
   if (query.facility) filter.facilityName = query.facility;
 
-  return await Screening.find(filter)
-    .populate('patient', 'mrn firstName lastName age gender')
-    .populate('createdBy', 'name role email')
+  // For now, search only applies after populate (so keep it simple)
+  // We'll filter after fetching if search is provided
+  let screenings = await Screening.find(filter)
+    .populate("patient", "mrn firstName lastName age gender")
+    .populate("createdBy", "name role email")
     .sort({ screeningDate: -1 });
+
+  if (query.search) {
+    const regex = new RegExp(query.search, "i");
+    screenings = screenings.filter(
+      (s) =>
+        regex.test(s.patient?.mrn) ||
+        regex.test(s.patient?.firstName) ||
+        regex.test(s.patient?.lastName)
+    );
+  }
+
+  return screenings;
 };
 
 // Get single screening by ID
 export const getScreeningByIdService = async (id, user) => {
   const screening = await Screening.findById(id)
-    .populate('patient', 'mrn firstName lastName age gender')
-    .populate('createdBy', 'name role email');
+    .populate("patient", "mrn firstName lastName age gender")
+    .populate("createdBy", "name role email");
 
-  if (!screening) throw new Error('Screening not found');
+  if (!screening) throw new Error("Screening not found");
 
-  if (user.role === 'patient') {
+  if (user.role === "patient") {
     const patientId = user.linkedPatient || user._id;
     if (screening.patient._id.toString() !== patientId.toString()) {
-      throw new Error('Unauthorized access to screening');
+      throw new Error("Unauthorized access to screening");
     }
   }
 
@@ -47,17 +61,19 @@ export const getScreeningByIdService = async (id, user) => {
 
 // Update screening
 export const updateScreeningService = async (id, updateData) => {
-  const screening = await Screening.findByIdAndUpdate(id, updateData, { new: true });
-  if (!screening) throw new Error('Screening not found');
+  const screening = await Screening.findByIdAndUpdate(id, updateData, {
+    new: true,
+  });
+  if (!screening) throw new Error("Screening not found");
   return screening;
 };
 
 // Soft delete (void) screening
 export const voidScreeningService = async (id, reason, voidedBy) => {
   const screening = await Screening.findById(id);
-  if (!screening) throw new Error('Screening not found');
+  if (!screening) throw new Error("Screening not found");
 
-  screening.voided = true;  
+  screening.voided = true;
   screening.voidReason = reason;
   screening.voidedBy = voidedBy;
   screening.voidedAt = Date.now();
@@ -66,30 +82,10 @@ export const voidScreeningService = async (id, reason, voidedBy) => {
   return screening;
 };
 
-// Get screenings 
-export const getScreeningsService = async (user, query) => {
-  const filter = {};
-
-  if (user.role === "patient") {
-    
-    filter.patient = user.linkedPatient || user._id;
-  }
-
-  if (query.status) filter.screeningOutcome = query.status;
-  if (query.facility) filter.facilityName = query.facility;
-
- 
-  if (query.search) {
-    filter.$or = [
-      { "patient.mrn": { $regex: query.search, $options: "i" } },
-      { "patient.firstName": { $regex: query.search, $options: "i" } },
-      { "patient.lastName": { $regex: query.search, $options: "i" } },
-    ];
-  }
-
-  return await Screening.find(filter)
+// Get screenings for a specific patient
+export const getScreeningsByPatientService = async (patientId) => {
+  return await Screening.find({ patient: patientId, voided: false })
     .populate("patient", "mrn firstName lastName age gender")
     .populate("createdBy", "name role email")
     .sort({ screeningDate: -1 });
 };
-
