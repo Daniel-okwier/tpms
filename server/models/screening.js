@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import Patient from './patient.js'; 
 
 const symptomSchema = new mongoose.Schema({
   coughWeeks: { type: Number, default: 0 },
@@ -64,9 +65,25 @@ const screeningSchema = new mongoose.Schema({
   voidedAt: { type: Date }
 }, { timestamps: true });
 
+// Indexes
 screeningSchema.index({ patient: 1, screeningDate: -1 });
 screeningSchema.index({ facilityName: 1, screeningDate: -1 });
 screeningSchema.index({ voided: 1 });
+
+
+ // sync screening outcome with patient classification
+ 
+screeningSchema.post('save', async function (doc) {
+  try {
+    if (doc.screeningOutcome === 'suspected_tb') {
+      await Patient.findByIdAndUpdate(doc.patient, { classification: 'suspected' });
+    } else if (doc.screeningOutcome === 'not_suspected') {
+      await Patient.findByIdAndUpdate(doc.patient, { classification: 'not_suspected' });
+    }
+  } catch (err) {
+    console.error('Error syncing screening outcome with patient classification:', err.message);
+  }
+});
 
 const Screening = mongoose.model('Screening', screeningSchema);
 export default Screening;
