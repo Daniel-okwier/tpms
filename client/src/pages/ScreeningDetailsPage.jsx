@@ -1,42 +1,60 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import api from "@/utils/axios";
-import Button from "@/components/shared/Button";
+import React, { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchScreeningById,
+  screeningSelectors,
+} from "../redux/slices/screeningSlice";
+import { toast } from "react-toastify";
 
-const ScreeningDetailsPage = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [screening, setScreening] = useState(null);
+const ScreeningDetailsPage = ({ screeningId, onClose }) => {
+  const dispatch = useDispatch();
+
+  const screening = useSelector((state) =>
+    screeningSelectors.selectById(state, screeningId)
+  );
+  const loading = useSelector((state) => state.screenings.loading);
+  const error = useSelector((state) => state.screenings.error);
 
   useEffect(() => {
-    api.get(`/screenings/${id}`).then((res) => setScreening(res.data.data));
-  }, [id]);
+    if (screeningId) {
+      dispatch(fetchScreeningById(screeningId));
+    }
+  }, [dispatch, screeningId]);
 
-  if (!screening) return <p>Loading...</p>;
+  useEffect(() => {
+    if (error) toast.error(error);
+  }, [error]);
+
+  if (loading === "pending") return <p>Loading screening details...</p>;
+  if (!screening) return <p>No details available.</p>;
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="bg-white shadow rounded-lg p-6 max-w-3xl mx-auto">
-        <h2 className="text-xl font-bold mb-4">Screening Details</h2>
-        <div className="space-y-2">
-          <p><strong>Patient:</strong> {screening.patient?.firstName} {screening.patient?.lastName}</p>
-          <p><strong>Date:</strong> {new Date(screening.screeningDate).toLocaleDateString()}</p>
-          <p><strong>Facility:</strong> {screening.facilityName}</p>
-          <p><strong>Outcome:</strong> {screening.screeningOutcome}</p>
-          <p><strong>Priority:</strong> {screening.priority}</p>
-          {screening.voided && (
-            <p className="text-red-600">
-              <strong>Voided:</strong> {screening.voidReason} on{" "}
-              {new Date(screening.voidedAt).toLocaleDateString()}
-            </p>
-          )}
-        </div>
+    <div className="bg-white p-6 rounded shadow mt-4">
+      <h3 className="text-lg font-semibold mb-3">Screening Details</h3>
+      <div className="space-y-2 text-sm">
+        <p>
+          <strong>Patient:</strong> {screening.patient?.firstName}{" "}
+          {screening.patient?.lastName}
+        </p>
+        <p>
+          <strong>Date:</strong>{" "}
+          {new Date(screening.date || screening.screeningDate).toLocaleDateString()}
+        </p>
+        <p>
+          <strong>Type:</strong> {screening.type}
+        </p>
+        <p>
+          <strong>Notes:</strong> {screening.notes || "None"}
+        </p>
+      </div>
 
-        <div className="mt-4">
-          <Button variant="outline" onClick={() => navigate("/screenings")}>
-            Back
-          </Button>
-        </div>
+      <div className="mt-4">
+        <button
+          onClick={onClose}
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 shadow"
+        >
+          Close
+        </button>
       </div>
     </div>
   );
