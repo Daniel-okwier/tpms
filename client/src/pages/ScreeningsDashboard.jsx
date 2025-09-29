@@ -1,189 +1,134 @@
-// client/src/pages/ScreeningsDashboard.jsx
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchScreenings, deleteScreening } from "../redux/slices/screeningSlice";
-import { fetchPatients } from "../redux/slices/patientSlice";
+import {
+  fetchScreenings,
+  deleteScreening,
+  screeningsSelectors,
+} from "../redux/slices/screeningSlice";
 import ScreeningForm from "./ScreeningForm";
 import ScreeningDetailsPage from "./ScreeningDetailsPage";
 import { toast } from "react-toastify";
 
 const ScreeningsDashboard = () => {
- const dispatch = useDispatch();
+  const dispatch = useDispatch();
 
-  // Screenings state const { items: screenings = [], loading, error } = useSelector( // FIX APPLIED HERE: Added = [] fallback
- (state) => state.screening );
+  const screenings = useSelector(screeningsSelectors.selectAll);
+  const loading = useSelector((state) => state.screenings.loading);
+  const error = useSelector((state) => state.screenings.error);
 
-  // Patients
- const patients = useSelector((state) => state.patients.items || []);
+  const patients = useSelector((state) => state.patients.items || []);
 
-  // UI state
- const [showForm, setShowForm] = useState(false);
- const [showDetail, setShowDetail] = useState(false);
- const [selectedScreening, setSelectedScreening] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const [selectedScreening, setSelectedScreening] = useState(null);
 
-  // Search/filter
- const [filters, setFilters] = useState({ q: "" });
+  useEffect(() => {
+    dispatch(fetchScreenings());
+  }, [dispatch]);
 
- useEffect(() => {
- dispatch(fetchScreenings());
- dispatch(fetchPatients({ page: 1, limit: 100 }));
- }, [dispatch]);
+  if (loading === "pending") return <p>Loading screenings...</p>;
+  if (error) return <p className="text-red-500">Error: {error}</p>;
 
- const handleDelete = async (id) => {
-if (!window.confirm("Are you sure you want to delete this screening?")) return;
+  const handleDelete = async (id) => {
+    try {
+      await dispatch(deleteScreening(id)).unwrap();
+      toast.success("Screening deleted successfully");
+    } catch (err) {
+      toast.error(err || "Failed to delete screening");
+    }
+  };
 
- try {
- await dispatch(deleteScreening(id)).unwrap();
- toast.success("Screening deleted successfully");
-dispatch(fetchScreenings());
- } catch (err) {
-toast.error(err.message || "Failed to delete screening");
- }
- };
+  return (
+    <div className="p-4">
+      <h2 className="text-xl font-bold mb-4">Screenings</h2>
 
- const handleEdit = (screening) => {
- setSelectedScreening(screening);
- setShowForm(true);
-};
+      {/* Add New Screening */}
+      <button
+        onClick={() => {
+          setSelectedScreening(null);
+          setShowForm(true);
+        }}
+        className="mb-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 shadow"
+      >
+        + New Screening
+      </button>
 
-  // Filtered screenings
- const filteredScreenings = screenings.filter((s) => {   const q = filters.q.toLowerCase();
- return (
-!filters.q ||
- s.patient?.firstName?.toLowerCase().includes(q) ||
- s.patient?.lastName?.toLowerCase().includes(q) ||
-s.patient?.mrn?.includes(filters.q) ||
- s.patientId?.toLowerCase().includes(q)
-);
-});
+      {/* Screening Form */}
+      {showForm && (
+        <ScreeningForm
+          patients={patients}
+          onClose={() => setShowForm(false)}
+          existingData={selectedScreening}
+        />
+      )}
 
-return (
- <div className="p-4">
-{/* Title + New button */}
- <div className="flex justify-between items-center mb-4">
- <h1 className="text-2xl font-bold text-white">Screenings</h1>
- <button
- onClick={() => {
- setSelectedScreening(null);
- setShowForm(true);
-}}
- className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
- >
- New Screening
- </button>
- </div>
+      {/* Screening Details */}
+      {showDetail && selectedScreening && (
+        <ScreeningDetailsPage
+          screeningId={selectedScreening}
+          onClose={() => setShowDetail(false)}
+        />
+      )}
 
- {/* Search bar */}
- <div className="flex gap-2 mb-4 flex-wrap">
- <input
-    type="text"
- placeholder="Search by patient name, MRN, or ID"
- value={filters.q}
- onChange={(e) => setFilters({ ...filters, q: e.target.value })}
- className="border px-2 py-1 rounded text-black"
- />
-</div>
- {/* Table */}
-<div className="overflow-x-auto">
- <table className="w-full table-auto border border-gray-300 bg-white text-black rounded-lg shadow-md">
- <thead>
- <tr className="bg-gray-100 text-gray-700">
-<th className="border px-2 py-2 text-left">Patient</th>
- <th className="border px-2 py-2 text-left">MRN</th>
- <th className="border px-2 py-2 text-left">Screening Date</th>
-  <th className="border px-2 py-2 text-left">Type</th>
- <th className="border px-2 py-2 text-left">Result</th>
- <th className="border px-2 py-2 text-center">Actions</th>
- </tr>
-</thead>
- <tbody>
- {loading === "pending" && (
- <tr>
-<td colSpan="6" className="text-center py-4">
- Loading screenings...
- </td>
- </tr>
- )}
-
- {error && (
- <tr>
- <td colSpan="6" className="text-center text-red-500 py-4">
- {typeof error === "string" ? error : "Failed to load screenings"}
- </td>
- </tr>
- )}
-
- {loading === "succeeded" &&
- !error &&
- filteredScreenings.map((s) => (
-<tr key={s._id} className="border-b hover:bg-gray-50">
- <td className="px-4 py-2">
- {s.patient
- ? `${s.patient.firstName} ${s.patient.lastName}`
- : s.patientId || "N/A"}
- </td>
- <td className="px-4 py-2">{s.patient?.mrn || "N/A"}</td>
-<td className="px-4 py-2">
- {new Date(s.screeningDate).toLocaleDateString()}
- </td>
- <td className="px-4 py-2">{s.type || "N/A"}</td>
- <td className="px-4 py-2">{s.result || "Pending"}</td>
- <td className="px-4 py-2 flex gap-2 justify-center">
- <button
- onClick={() => handleEdit(s)}
- className="px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600 shadow"
- >
-Edit
- </button>
- <button
- onClick={() => handleDelete(s._id)}
- className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600 shadow"
- >
- Delete
- </button>
- <button
- onClick={() => {
- setSelectedScreening(s);
- setShowDetail(true);
- }}
- className="px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 shadow"
- >
- Details
-</button>
- </td>
- </tr>
- ))}
-
- {loading === "succeeded" &&
- !error &&
- filteredScreenings.length === 0 && (
- <tr>
- <td colSpan="6" className="text-center py-4">
- No screenings found
- </td>
- </tr>
- )}
- </tbody>
- </table>
-  </div>
-
-{/* Modals */}
-{showForm && (
- <ScreeningForm
- existingScreening={selectedScreening}
- patients={patients}
- onClose={() => setShowForm(false)}
- />
- )}
-
-{showDetail && (
- <ScreeningDetail
- screening={selectedScreening}
- onClose={() => setShowDetail(false)}
- />
- )}
- </div>
- );
+      {/* Screenings List */}
+      <table className="w-full border-collapse border border-gray-300 text-sm">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="border px-3 py-2">Patient</th>
+            <th className="border px-3 py-2">Date</th>
+            <th className="border px-3 py-2">Type</th>
+            <th className="border px-3 py-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {screenings.map((s) => (
+            <tr key={s._id}>
+              <td className="border px-3 py-2">
+                {s.patient?.firstName} {s.patient?.lastName}
+              </td>
+              <td className="border px-3 py-2">
+                {new Date(s.screeningDate || s.date).toLocaleDateString()}
+              </td>
+              <td className="border px-3 py-2">{s.type}</td>
+              <td className="border px-3 py-2 space-x-2">
+                <button
+                  onClick={() => {
+                    setSelectedScreening(s._id);
+                    setShowDetail(true);
+                  }}
+                  className="px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 shadow"
+                >
+                  Details
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedScreening(s);
+                    setShowForm(true);
+                  }}
+                  className="px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600 shadow"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(s._id)}
+                  className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600 shadow"
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+          ))}
+          {screenings.length === 0 && (
+            <tr>
+              <td colSpan="4" className="text-center py-3 text-gray-500">
+                No screenings available
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
 };
 
 export default ScreeningsDashboard;

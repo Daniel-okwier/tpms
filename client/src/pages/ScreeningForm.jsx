@@ -1,101 +1,119 @@
 import React, { useState } from "react";
 import { useDispatch } from "react-redux";
-import { createScreening } from "@/redux/slices/screeningSlice";
-import { useNavigate } from "react-router-dom";
-import Button from "@/components/shared/Button";
-import { toast } from "react-hot-toast";
+import {
+  createScreening,
+  updateScreening,
+} from "../redux/slices/screeningSlice";
 
-const CreateScreeningForm = () => {
+const ScreeningForm = ({ patients, onClose, existingData }) => {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const [form, setForm] = useState({
-    patient: "",
-    screeningDate: "",
-    facilityName: "",
-    screeningOutcome: "",
-    priority: "",
-  });
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await dispatch(createScreening(form)).unwrap();
-      toast.success("Screening created successfully");
-      navigate("/screenings");
-    } catch (err) {
-      toast.error(err || "Failed to create screening");
+  const [formData, setFormData] = useState(
+    existingData || {
+      patientId: "",
+      date: "",
+      type: "",
+      notes: "",
     }
+  );
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (existingData) {
+      dispatch(updateScreening({ id: existingData._id, updatedData: formData }));
+    } else {
+      dispatch(createScreening(formData));
+    }
+    onClose();
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="bg-white shadow rounded-lg p-6 max-w-2xl mx-auto">
-        <h2 className="text-xl font-bold mb-4">Create Screening</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            name="patient"
-            value={form.patient}
-            onChange={handleChange}
-            placeholder="Patient ID"
-            className="w-full border p-2 rounded"
-          />
+    <div className="bg-white p-6 rounded shadow mb-4">
+      <h3 className="text-lg font-semibold mb-3">
+        {existingData ? "Edit Screening" : "New Screening"}
+      </h3>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        {/* Patient Dropdown */}
+        <div>
+          <label className="block mb-2">Patient</label>
+          <select
+            value={formData.patientId}
+            onChange={(e) =>
+              setFormData({ ...formData, patientId: e.target.value })
+            }
+            className="border px-2 py-1 rounded w-full text-black"
+            required
+          >
+            <option value="">-- Select Patient --</option>
+            {patients.map((p) => (
+              <option key={p._id} value={p._id}>
+                {p.firstName} {p.lastName} (MRN: {p.mrn})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Date */}
+        <div>
+          <label className="block mb-2">Date</label>
           <input
             type="date"
-            name="screeningDate"
-            value={form.screeningDate}
-            onChange={handleChange}
-            className="w-full border p-2 rounded"
+            value={formData.date}
+            onChange={(e) =>
+              setFormData({ ...formData, date: e.target.value })
+            }
+            className="border px-2 py-1 rounded w-full text-black"
+            required
           />
+        </div>
+
+        {/* Type */}
+        <div>
+          <label className="block mb-2">Type</label>
           <input
             type="text"
-            name="facilityName"
-            value={form.facilityName}
-            onChange={handleChange}
-            placeholder="Facility Name"
-            className="w-full border p-2 rounded"
+            value={formData.type}
+            onChange={(e) =>
+              setFormData({ ...formData, type: e.target.value })
+            }
+            className="border px-2 py-1 rounded w-full text-black"
+            placeholder="e.g. Initial, Follow-up"
+            required
           />
-          <select
-            name="screeningOutcome"
-            value={form.screeningOutcome}
-            onChange={handleChange}
-            className="w-full border p-2 rounded"
-          >
-            <option value="">Select Outcome</option>
-            <option value="suspected_tb">Suspected TB</option>
-            <option value="not_suspected">Not Suspected</option>
-          </select>
-          <select
-            name="priority"
-            value={form.priority}
-            onChange={handleChange}
-            className="w-full border p-2 rounded"
-          >
-            <option value="">Select Priority</option>
-            <option value="priority">Priority</option>
-            <option value="normal">Normal</option>
-          </select>
+        </div>
 
-          <div className="flex space-x-2">
-            <Button type="submit" variant="primary">
-              Save
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate("/screenings")}
-            >
-              Cancel
-            </Button>
-          </div>
-        </form>
-      </div>
+        {/* Notes */}
+        <div>
+          <label className="block mb-2">Notes</label>
+          <textarea
+            value={formData.notes}
+            onChange={(e) =>
+              setFormData({ ...formData, notes: e.target.value })
+            }
+            className="border px-2 py-1 rounded w-full text-black"
+            rows="3"
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="flex space-x-3">
+          <button
+            type="submit"
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 shadow"
+          >
+            {existingData ? "Update" : "Create"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 shadow"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
     </div>
   );
 };
 
-export default CreateScreeningForm;
+export default ScreeningForm;
