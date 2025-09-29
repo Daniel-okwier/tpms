@@ -69,7 +69,7 @@ patientSchema.pre('validate', async function(next) {
       if (!isNaN(lastNum)) newNumber = lastNum + 1;
     }
 
-    this.mrn = `PT-${String(newNumber).padStart(5, '0')}`; // e.g., PT-00001
+    this.mrn = `PT-${String(newNumber).padStart(5, '0')}`; 
   }
   next();
 });
