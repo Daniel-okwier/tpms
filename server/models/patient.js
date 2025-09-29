@@ -14,6 +14,7 @@ const patientSchema = new mongoose.Schema(
     gender: { type: String, enum: ['male', 'female', 'other'], required: true },
     dateOfBirth: { type: Date, required: true },
     age: { type: Number }, 
+
     contactInfo: {
       phone: { 
         type: String,
@@ -31,20 +32,31 @@ const patientSchema = new mongoose.Schema(
         }
       }
     },
+
     address: { type: String },
-    archived: { type: Boolean, default: false }, 
-    registrationDate: { type: Date, default: Date.now },
     facilityName: { type: String, required: true },
+    registrationDate: { type: Date, default: Date.now },
+
+    // TB status at registration
     initialStatus: {
       type: String,
       enum: ['suspected_tb', 'confirmed_tb'],
       default: 'suspected_tb'
     },
+
+    archived: { type: Boolean, default: false }, 
+
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true
-    }
+    },
+
+    // Soft delete (align with Screening)
+    voided: { type: Boolean, default: false },
+    voidReason: { type: String },
+    voidedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    voidedAt: { type: Date }
   },
   { timestamps: true }
 );
@@ -69,10 +81,15 @@ patientSchema.pre('validate', async function(next) {
       if (!isNaN(lastNum)) newNumber = lastNum + 1;
     }
 
-    this.mrn = `PT-${String(newNumber).padStart(5, '0')}`; 
+    this.mrn = `PT-${String(newNumber).padStart(5, '0')}`; // e.g., PT-00001
   }
   next();
 });
+
+// Indexes
+patientSchema.index({ mrn: 1 });
+patientSchema.index({ lastName: 1, firstName: 1 });
+patientSchema.index({ facilityName: 1 });
 
 const Patient = mongoose.model('Patient', patientSchema);
 export default Patient;
