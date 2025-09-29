@@ -4,6 +4,7 @@ import {
   createScreening,
   updateScreening,
 } from "../redux/slices/screeningSlice";
+import { toast } from "react-toastify";
 
 const ScreeningForm = ({ patients, onClose, existingData }) => {
   const dispatch = useDispatch();
@@ -17,14 +18,22 @@ const ScreeningForm = ({ patients, onClose, existingData }) => {
     }
   );
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (existingData) {
-      dispatch(updateScreening({ id: existingData._id, updatedData: formData }));
-    } else {
-      dispatch(createScreening(formData));
+    try {
+      if (existingData) {
+        await dispatch(
+          updateScreening({ id: existingData._id, updates: formData })
+        ).unwrap();
+        toast.success("Screening updated successfully");
+      } else {
+        await dispatch(createScreening(formData)).unwrap();
+        toast.success("Screening created successfully");
+      }
+      onClose();
+    } catch (err) {
+      toast.error(err || "Failed to save screening");
     }
-    onClose();
   };
 
   return (
