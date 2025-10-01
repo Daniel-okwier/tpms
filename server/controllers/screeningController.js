@@ -1,95 +1,54 @@
+import asyncHandler from '../middleware/asyncHandler.js';
 import {
   createScreeningService,
   getScreeningsService,
   getScreeningByIdService,
   updateScreeningService,
   voidScreeningService,
+  deleteScreeningService,
   getScreeningsByPatientService,
-} from "../services/screeningService.js";
+} from '../services/screeningService.js';
 
 // Create a screening
-export const createScreening = async (req, res) => {
-  try {
-    const screening = await createScreeningService({
-      data: req.body,
-      userId: req.user._id,
-    });
-    res.status(201).json({ success: true, data: screening });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message || "Failed to create screening",
-    });
-  }
-};
+export const createScreening = asyncHandler(async (req, res) => {
+  const screening = await createScreeningService({ data: req.body, userId: req.user._id });
+  res.status(201).json({ success: true, data: screening });
+});
 
-// Get screenings
-export const getScreenings = async (req, res) => {
-  try {
-    const screenings = await getScreeningsService(req.user, req.query);
-    res.json({ success: true, data: screenings });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message || "Failed to fetch screenings",
-    });
-  }
-};
+// Get screenings (list with optional query params)
+export const getScreenings = asyncHandler(async (req, res) => {
+  const { page, limit, q, status, outcome } = req.query;
+  const result = await getScreeningsService(req.user, { page, limit, q, status, outcome });
+  // result: { data: [...], count }
+  res.status(200).json({ success: true, count: result.count, data: result.data });
+});
 
-// Get single screening
-export const getScreeningById = async (req, res) => {
-  try {
-    const screening = await getScreeningByIdService(req.params.id, req.user);
-    res.json({ success: true, data: screening });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message || "Failed to fetch screening",
-    });
-  }
-};
+// Get single screening by ID
+export const getScreeningById = asyncHandler(async (req, res) => {
+  const screening = await getScreeningByIdService(req.params.id, req.user);
+  res.status(200).json({ success: true, data: screening });
+});
 
 // Update screening
-export const updateScreening = async (req, res) => {
-  try {
-    const screening = await updateScreeningService(req.params.id, req.body);
-    res.json({ success: true, data: screening });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message || "Failed to update screening",
-    });
-  }
-};
+export const updateScreening = asyncHandler(async (req, res) => {
+  const screening = await updateScreeningService(req.params.id, req.body);
+  res.status(200).json({ success: true, data: screening });
+});
 
-// Void screening
-export const voidScreening = async (req, res) => {
-  try {
-    const result = await voidScreeningService(
-      req.params.id,
-      req.body.reason,
-      req.user._id
-    );
-    res.json({ success: true, data: result });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message || "Failed to void screening",
-    });
-  }
-};
+// Soft-void screening (keeps record, marks voided)
+export const voidScreening = asyncHandler(async (req, res) => {
+  const screening = await voidScreeningService(req.params.id, req.body.reason, req.user._id);
+  res.status(200).json({ success: true, data: screening });
+});
 
-// Get screenings by patient
-export const getScreeningsByPatient = async (req, res) => {
-  try {
-    const screenings = await getScreeningsByPatientService(
-      req.params.patientId
-    );
-    res.json({ success: true, data: screenings });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message || "Failed to fetch patient screenings",
-    });
-  }
-};
+// Hard delete screening
+export const deleteScreening = asyncHandler(async (req, res) => {
+  const deleted = await deleteScreeningService(req.params.id);
+  res.status(200).json({ success: true, message: 'Screening deleted', data: deleted });
+});
+
+// Get screenings by patient (staff)
+export const getScreeningsByPatient = asyncHandler(async (req, res) => {
+  const screenings = await getScreeningsByPatientService(req.params.patientId);
+  res.status(200).json({ success: true, data: screenings });
+});

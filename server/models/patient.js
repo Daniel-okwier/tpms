@@ -6,8 +6,8 @@ const patientSchema = new mongoose.Schema(
       type: String, 
       required: true, 
       unique: true, 
-      trim: true,
-      index: true
+      trim: true
+      
     },
     firstName: { type: String, required: true, trim: true, index: true },
     lastName: { type: String, required: true, trim: true, index: true },
@@ -77,17 +77,16 @@ patientSchema.pre('validate', async function(next) {
     let newNumber = 1;
 
     if (lastPatient && lastPatient.mrn) {
-      const lastNum = parseInt(lastPatient.mrn.replace(/\D/g, '')); // strip non-numbers
+      const lastNum = parseInt(lastPatient.mrn.replace(/\D/g, '')); 
       if (!isNaN(lastNum)) newNumber = lastNum + 1;
     }
 
-    this.mrn = `PT-${String(newNumber).padStart(5, '0')}`; // e.g., PT-00001
+    this.mrn = `PT-${String(newNumber).padStart(5, '0')}`; 
   }
   next();
 });
 
-// Indexes
-patientSchema.index({ mrn: 1 });
+// Indexes (keep only the compound and facility indexes)
 patientSchema.index({ lastName: 1, firstName: 1 });
 patientSchema.index({ facilityName: 1 });
 

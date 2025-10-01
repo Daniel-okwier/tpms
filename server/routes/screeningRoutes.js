@@ -1,40 +1,36 @@
-import express from "express";
+import express from 'express';
 import {
   createScreening,
   getScreenings,
   getScreeningById,
   updateScreening,
   voidScreening,
+  deleteScreening,
   getScreeningsByPatient,
-} from "../controllers/screeningController.js";
-import {
-  protect,
-  authorizeRoles as authorize,
-} from "../middleware/authMiddleware.js";
+} from '../controllers/screeningController.js';
+import { protect, authorizeRoles as authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Create screening
-router.post("/", protect, authorize("nurse", "doctor", "admin"), createScreening);
+// Create
+router.post('/', protect, authorize('nurse', 'doctor'), createScreening);
 
-// List screenings ( staff can filter)
-router.get("/", protect, getScreenings);
+// List (with filters/pagination) — staff
+router.get('/', protect, getScreenings);
 
-// Get single screening
-router.get("/:id", protect, getScreeningById);
+// Get one
+router.get('/:id', protect, getScreeningById);
 
-// Update screening
-router.put("/:id", protect, authorize("nurse", "doctor", "admin"), updateScreening);
+// Update
+router.put('/:id', protect, authorize('nurse', 'doctor'), updateScreening);
 
-// Soft void (not hard delete)
-router.post("/:id/void", protect, authorize("doctor", "admin"), voidScreening);
+// Soft void (doctors)
+router.post('/:id/void', protect, authorize('doctor'), voidScreening);
 
-// List screenings for a specific patient (staff only)
-router.get(
-  "/patient/:patientId",
-  protect,
-  authorize("nurse", "doctor", "admin"),
-  getScreeningsByPatient
-);
+// Hard delete (doctors)
+router.delete('/:id', protect, authorize('doctor'), deleteScreening);
+
+// Screenings for a specific patient (staff)
+router.get('/patient/:patientId', protect, authorize('nurse', 'doctor'), getScreeningsByPatient);
 
 export default router;
