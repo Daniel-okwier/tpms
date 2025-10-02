@@ -27,18 +27,32 @@ export default function Login() {
     setSubmitting(true);
 
     try {
-      const { data } = await api.post("auth/login", credentials);
+      // IMPORTANT: leading slash ensures correct baseURL join -> /api/auth/login
+      const { data } = await api.post("/auth/login", credentials);
 
-      dispatch(
-        setCredentials({
-          user: data.user,
-          token: data.token,
-        })
-      );
+      // data expected: { user: {...}, token: "..." }
+      if (data?.user && data?.token) {
+        dispatch(
+          setCredentials({
+            user: data.user,
+            token: data.token,
+          })
+        );
+        // store as fallback so axios interceptor can use it
+        localStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.setItem("token", data.token);
 
-      navigate("/dashboard");
+        navigate("/dashboard");
+      } else {
+        setError("Unexpected server response.");
+      }
     } catch (err) {
-      setError(err.response?.data?.message || "Invalid email or password");
+      // Better error handling: network or server message
+      if (!err.response) {
+        setError("Network error. Check server or internet connection.");
+      } else {
+        setError(err.response?.data?.message || "Invalid email or password");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -112,3 +126,4 @@ export default function Login() {
     </div>
   );
 }
+
