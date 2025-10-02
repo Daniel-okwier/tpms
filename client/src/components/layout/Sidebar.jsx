@@ -19,12 +19,12 @@ export default function Sidebar() {
 
   const navItems = [
     { name: "Dashboard", path: "/dashboard", icon: Activity, roles: ["admin","doctor","lab_staff","nurse"] },
-    { name: "Patients", path: "/patients", icon: Users, roles: ["admin","doctor"] },
-    { name: "Diagnosis", path: "/diagnosis", icon: ClipboardList, roles: ["admin","doctor"] },
-    { name: "Lab Tests", path: "/labtests", icon: FlaskConical, roles: ["admin","lab_staff"] },
-    { name: "Screenings", path: "/screenings", icon: Stethoscope, roles: ["admin","doctor"] },
-    { name: "Appointments", path: "/appointments", icon: Calendar, roles: ["admin","doctor"] },
-    { name: "Treatments", path: "/treatments", icon: ClipboardList, roles: ["admin","doctor"] },
+    { name: "Patients", path: "/patients", icon: Users, roles: ["admin","nurse","doctor"] },
+    { name: "Diagnosis", path: "/diagnosis", icon: ClipboardList, roles: ["admin","nurse","doctor"] },
+    { name: "Lab Tests", path: "/labtests", icon: FlaskConical, roles: ["admin","nurse","lab_staff"] },
+    { name: "Screenings", path: "/screenings", icon: Stethoscope, roles: ["admin","nurse","doctor"] },
+    { name: "Appointments", path: "/appointments", icon: Calendar, roles: ["admin","nurse","doctor"] },
+    { name: "Treatments", path: "/treatments", icon: ClipboardList, roles: ["admin","nurse","doctor"] },
     { name: "Reports", path: "/reports", icon: FileText, roles: ["admin"] },
     { name: "Manage Users", path: "/manage-users", icon: Users, roles: ["admin"] },
   ];
