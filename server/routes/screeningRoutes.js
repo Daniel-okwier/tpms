@@ -18,8 +18,8 @@ router.post('/', protect, authorize('nurse', 'doctor'), createScreening);
 // List screenings (with filters, pagination, search)
 router.get('/', protect, getScreenings);
 
-// Soft void (doctors only) → must come before /:id to avoid conflict
-router.post('/:id/void', protect, authorize('doctor'), voidScreening);
+// Soft void 
+router.post('/:id/void', protect, authorize('doctor','nurse'), voidScreening);
 
 // Get single screening
 router.get('/:id', protect, getScreeningById);
