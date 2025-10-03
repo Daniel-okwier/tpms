@@ -12,12 +12,12 @@ export const createScreeningService = async ({ data, userId }) => {
 // Get screenings (supports pagination, filters, search)
 export const getScreeningsService = async (user, query = {}) => {
   const page = Math.max(parseInt(query.page || 1, 10), 1);
-  const limit = Math.max(parseInt(query.limit || 100, 10), 1); // default large enough
+  const limit = Math.max(parseInt(query.limit || 100, 10), 1);
   const skip = (page - 1) * limit;
 
   const filter = { voided: { $ne: true } };
 
-  // If user is a patient, limit to their screenings (assumes user.linkedPatient exists)
+  // If user is a patient, limit to their own screenings
   if (user && user.role === 'patient') {
     filter.patient = user.linkedPatient || user._id;
   }
@@ -25,23 +25,26 @@ export const getScreeningsService = async (user, query = {}) => {
   if (query.status) filter.screeningOutcome = query.status;
   if (query.outcome) filter.screeningOutcome = query.outcome;
 
-  // Fetch full list with populate, then apply search in-memory (simple & safe)
   let docs = await Screening.find(filter)
     .populate('patient', 'mrn firstName lastName age gender')
     .populate('createdBy', 'name role email')
     .sort({ screeningDate: -1 });
 
-  // Search by patient fields if provided
+  // Flexible search by MRN, firstName, lastName, or combined name
   if (query.q) {
     const q = query.q.toString().trim();
     const re = new RegExp(q, 'i');
-    docs = docs.filter(
-      (s) =>
-        re.test(s.patient?.mrn ?? '') ||
-        re.test(s.patient?.firstName ?? '') ||
-        re.test(s.patient?.lastName ?? '') ||
-        (s.patient?._id?.toString() ?? '').includes(q)
-    );
+
+    docs = docs.filter((s) => {
+      const fullName = `${s.patient?.firstName || ""} ${s.patient?.lastName || ""}`.trim();
+      return (
+        re.test(s.patient?.mrn ?? "") || // MRN
+        re.test(s.patient?.firstName ?? "") || // First name
+        re.test(s.patient?.lastName ?? "") || // Last name
+        re.test(fullName) || // Full name
+        (s.patient?._id?.toString() ?? "").includes(q) // Patient ID
+      );
+    });
   }
 
   const count = docs.length;
@@ -58,7 +61,7 @@ export const getScreeningByIdService = async (id, user) => {
 
   if (!screening) throw new Error('Screening not found');
 
-  // Patients can only access their own screenings
+  // Patients can only see their own screenings
   if (user && user.role === 'patient') {
     const patientId = user.linkedPatient || user._id;
     if (screening.patient._id.toString() !== patientId.toString()) {
@@ -97,7 +100,7 @@ export const deleteScreeningService = async (id) => {
   return screening;
 };
 
-// Get screenings for a specific patient (not-voided)
+// Get screenings for a specific patient
 export const getScreeningsByPatientService = async (patientId) => {
   return await Screening.find({ patient: patientId, voided: false })
     .populate('patient', 'mrn firstName lastName age gender')
