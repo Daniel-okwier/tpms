@@ -2,15 +2,16 @@ import Diagnosis from '../models/diagnosis.js';
 import Patient from '../models/patient.js';
 
 // Create a diagnosis
-export const createDiagnosisService = async ({ patientId, diagnosisType, notes, diagnosedBy }) => {
+export const createDiagnosisService = async ({ patientId, labTests, diagnosisType, notes, diagnosedBy }) => {
   const patient = await Patient.findById(patientId);
   if (!patient) throw new Error('Patient not found');
 
   const diagnosis = await Diagnosis.create({
     patient: patientId,
+    labTests,
     diagnosisType,
     notes,
-    diagnosedBy
+    diagnosedBy,
   });
 
   return diagnosis;
@@ -20,14 +21,16 @@ export const createDiagnosisService = async ({ patientId, diagnosisType, notes, 
 export const getDiagnosesService = async () => {
   return await Diagnosis.find()
     .populate('patient', 'mrn firstName lastName age gender')
-    .populate('diagnosedBy', 'name role email');
+    .populate('diagnosedBy', 'name role email')
+    .populate('labTests', 'testType result status requestedAt completedAt');
 };
 
 // Get diagnosis by ID
 export const getDiagnosisByIdService = async (id) => {
   const diagnosis = await Diagnosis.findById(id)
     .populate('patient', 'mrn firstName lastName age gender')
-    .populate('diagnosedBy', 'name role email');
+    .populate('diagnosedBy', 'name role email')
+    .populate('labTests', 'testType result status requestedAt completedAt');
 
   if (!diagnosis) throw new Error('Diagnosis not found');
   return diagnosis;
@@ -35,7 +38,11 @@ export const getDiagnosisByIdService = async (id) => {
 
 // Update diagnosis
 export const updateDiagnosisService = async (id, updates) => {
-  const diagnosis = await Diagnosis.findByIdAndUpdate(id, updates, { new: true });
+  const diagnosis = await Diagnosis.findByIdAndUpdate(id, updates, { new: true })
+    .populate('patient', 'mrn firstName lastName age gender')
+    .populate('diagnosedBy', 'name role email')
+    .populate('labTests', 'testType result status requestedAt completedAt');
+
   if (!diagnosis) throw new Error('Diagnosis not found');
   return diagnosis;
 };
