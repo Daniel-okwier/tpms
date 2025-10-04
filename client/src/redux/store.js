@@ -4,6 +4,7 @@ import userReducer from "./slices/userSlice";
 import patientReducer from "./slices/patientSlice";
 import screeningsReducer from "./slices/screeningSlice";
 import labTestsReducer from "./slices/labTestsSlice"; 
+import diagnosisReducer from "./slices/diagnosisSlice";
 
 
 export const store = configureStore({
@@ -13,6 +14,7 @@ export const store = configureStore({
     patients: patientReducer,
     screenings: screeningsReducer,
     labTests: labTestsReducer, 
+    diagnosis: diagnosisReducer,
   },
 });
 

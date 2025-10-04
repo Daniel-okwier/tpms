@@ -17,7 +17,7 @@ import Patients from "@/pages/ManagePatients";
 import PatientDetails from "@/pages/PatientDetails"; 
 import Diagnosis from "@/pages/Diagnosis";
 import LabTests from "@/pages/LabTests";
-import ScreeningsDashboard from "@/pages/ScreeningsDashboard";   // ✅ updated import
+import ScreeningsDashboard from "@/pages/ScreeningsDashboard";   
 import Appointments from "@/pages/Appointments";
 import Treatments from "@/pages/Treatments";
 import Reports from "@/pages/Reports";
@@ -99,7 +99,7 @@ export default function App() {
           <Route
             path="/diagnosis"
             element={
-              <ProtectedRoute roles={["doctor"]}>
+              <ProtectedRoute roles={["doctor",'nurse']}>
                 <Diagnosis />
               </ProtectedRoute>
             }
@@ -116,7 +116,7 @@ export default function App() {
             path="/screenings"
             element={
               <ProtectedRoute roles={["doctor", "nurse"]}> 
-                <ScreeningsDashboard />   {/* ✅ use new dashboard */}
+                <ScreeningsDashboard />  
               </ProtectedRoute>
             }
           />
