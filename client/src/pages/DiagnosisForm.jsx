@@ -1,134 +1,147 @@
+
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchPatients } from "../redux/slices/patientSlice";
-import { fetchLabTestsByPatient } from "../redux/slices/labTestsSlice";
 import { createDiagnosis } from "../redux/slices/diagnosisSlice";
+import { fetchPatients } from "../redux/slices/patientSlice";
+import { fetchLabResultsByPatient } from "../redux/slices/labResultSlice"; 
 
-const DiagnosisForm = ({ onClose }) => {
-const dispatch = useDispatch();
-const { patients } = useSelector((state) => state.patient);
-const { labTests, loading: labLoading } = useSelector((state) => state.labTest);
+const DiagnosisForm = () => {
+  const dispatch = useDispatch();
 
-const [formData, setFormData] = useState({
-patient: "",
-diagnosis: "",
-notes: "",
-});
+  // Redux state
+  const { patients, loading: patientsLoading } = useSelector(
+    (state) => state.patients || { patients: [], loading: false }
+  );
 
-const [selectedPatientLabs, setSelectedPatientLabs] = useState([]);
+  const { labResults, loading: labLoading } = useSelector(
+    (state) => state.labResults || { labResults: [], loading: false }
+  );
 
-useEffect(() => {
-dispatch(fetchPatients());
-}, [dispatch]);
+  // Local state
+  const [formData, setFormData] = useState({
+    patient: "",
+    diagnosis: "",
+    notes: "",
+  });
 
-// Fetch labs when patient changes
-useEffect(() => {
-if (formData.patient) {
-dispatch(fetchLabTestsByPatient(formData.patient)).then((res) => {
-if (res.payload) {
-setSelectedPatientLabs(res.payload);
-}
-});
-} else {
-setSelectedPatientLabs([]);
-}
-}, [dispatch, formData.patient]);
+  // Fetch patients once
+  useEffect(() => {
+    dispatch(fetchPatients());
+  }, [dispatch]);
 
-const handleChange = (e) => {
-setFormData({ ...formData, [e.target.name]: e.target.value });
-};
+  // Fetch lab results whenever a patient is chosen
+  useEffect(() => {
+    if (formData.patient) {
+      dispatch(fetchLabResultsByPatient(formData.patient));
+    }
+  }, [formData.patient, dispatch]);
 
-const handleSubmit = (e) => {
-e.preventDefault();
-dispatch(createDiagnosis(formData));
-onClose();
-};
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
 
-return ( <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center"> <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg"> <h2 className="text-xl font-bold mb-4">New Diagnosis</h2> <form onSubmit={handleSubmit} className="space-y-4">
-{/* Patient Selection */} <div> <label className="block font-semibold">Patient</label> <select
-           name="patient"
-           value={formData.patient}
-           onChange={handleChange}
-           required
-           className="w-full border rounded px-3 py-2"
-         > <option value="">-- Select Patient --</option>
-{patients.map((p) => ( <option key={p._id} value={p._id}>
-{p.firstName} {p.lastName} (MRN: {p.mrn}) </option>
-))} </select> </div>
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.patient || !formData.diagnosis) {
+      alert("Please select a patient and provide a diagnosis.");
+      return;
+    }
+    dispatch(createDiagnosis(formData));
+    setFormData({ patient: "", diagnosis: "", notes: "" });
+  };
 
-```
-      {/* Lab Tests Preview */}
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="p-4 border rounded bg-white shadow space-y-4"
+    >
+      <h2 className="text-lg font-bold">Add Diagnosis</h2>
+
+      {/* Patient Dropdown */}
       <div>
-        <label className="block font-semibold">Recent Lab Tests</label>
-        {labLoading ? (
-          <p>Loading lab results...</p>
-        ) : selectedPatientLabs.length > 0 ? (
-          <ul className="list-disc ml-5 text-sm">
-            {selectedPatientLabs.map((lab) => (
-              <li key={lab._id}>
-                <strong>{lab.testType}</strong>: {lab.result} (
-                {new Date(lab.date).toLocaleDateString()})
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-gray-600 text-sm">
-            No lab results available for this patient.
-          </p>
-        )}
-      </div>
-
-      {/* Diagnosis Dropdown */}
-      <div>
-        <label className="block font-semibold">Diagnosis</label>
+        <label className="block mb-1">Patient</label>
         <select
-          name="diagnosis"
-          value={formData.diagnosis}
+          name="patient"
+          value={formData.patient}
           onChange={handleChange}
+          className="w-full border p-2 rounded"
           required
-          className="w-full border rounded px-3 py-2"
         >
-          <option value="">-- Select Diagnosis --</option>
-          <option value="Pulmonary TB - Confirmed">Pulmonary TB - Confirmed</option>
-          <option value="Pulmonary TB - Presumptive">Pulmonary TB - Presumptive</option>
-          <option value="Extrapulmonary TB">Extrapulmonary TB</option>
-          <option value="Not TB">Not TB</option>
-          <option value="MDR-TB">MDR-TB</option>
+          <option value="">-- Select Patient --</option>
+          {patientsLoading ? (
+            <option>Loading...</option>
+          ) : patients && patients.length > 0 ? (
+            patients.map((p) => (
+              <option key={p._id} value={p._id}>
+                {p.name}
+              </option>
+            ))
+          ) : (
+            <option disabled>No patients available</option>
+          )}
         </select>
       </div>
 
-      {/* Notes */}
+      {/* Show lab results for the selected patient */}
+      {formData.patient && (
+        <div className="bg-gray-50 border p-3 rounded">
+          <h3 className="font-semibold mb-2">Lab Results</h3>
+          {labLoading ? (
+            <p>Loading lab results...</p>
+          ) : labResults && labResults.length > 0 ? (
+            <ul className="list-disc pl-5 space-y-1">
+              {labResults.map((lr) => (
+                <li key={lr._id}>
+                  <span className="font-medium">{lr.testType}:</span>{" "}
+                  {lr.result}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No lab results for this patient.</p>
+          )}
+        </div>
+      )}
+
+      {/* Diagnosis field */}
       <div>
-        <label className="block font-semibold">Notes</label>
+        <label className="block mb-1">Diagnosis</label>
+        <input
+          type="text"
+          name="diagnosis"
+          value={formData.diagnosis}
+          onChange={handleChange}
+          className="w-full border p-2 rounded"
+          placeholder="e.g. Pulmonary TB"
+          required
+        />
+      </div>
+
+      {/* Notes field */}
+      <div>
+        <label className="block mb-1">Notes (optional)</label>
         <textarea
           name="notes"
           value={formData.notes}
           onChange={handleChange}
-          className="w-full border rounded px-3 py-2"
-          placeholder="Additional details..."
+          className="w-full border p-2 rounded"
+          placeholder="Additional notes..."
         />
       </div>
 
-      {/* Buttons */}
-      <div className="flex justify-end gap-3">
-        <button
-          type="button"
-          onClick={onClose}
-          className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Save Diagnosis
-        </button>
-      </div>
+      {/* Submit */}
+      <button
+        type="submit"
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+      >
+        Save Diagnosis
+      </button>
     </form>
-  </div>
-</div>
-);
+  );
 };
 
 export default DiagnosisForm;
+
