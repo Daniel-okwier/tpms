@@ -1,109 +1,89 @@
-import React, { useState } from "react";
+// frontend/src/components/DiagnosisForm.jsx
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { createDiagnosis } from "@/redux/slices/diagnosisSlice";
-import { toast } from "react-toastify";
+import { createDiagnosis } from "../slices/diagnosisSlice";
+import { fetchPatients } from "../slices/patientSlice";
 
-const DiagnosisForm = ({ onClose }) => {
+const DiagnosisForm = () => {
   const dispatch = useDispatch();
-  const { patients } = useSelector((state) => state.patient); 
+  const { patients = [], loading: patientsLoading } = useSelector(
+    (state) => state.patients || {}
+  );
 
-  const [form, setForm] = useState({
+  const [formData, setFormData] = useState({
     patient: "",
-    diagnosisType: "Suspected TB",
+    diagnosis: "",
     notes: "",
   });
 
+  useEffect(() => {
+    dispatch(fetchPatients());
+  }, [dispatch]);
+
   const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    try {
-      await dispatch(createDiagnosis(form)).unwrap();
-      toast.success("Diagnosis created");
-      onClose();
-    } catch (err) {
-      toast.error(err || "Failed to create diagnosis");
-    }
+    dispatch(createDiagnosis(formData));
+    setFormData({ patient: "", diagnosis: "", notes: "" }); 
   };
+
+  if (patientsLoading) return <p>Loading patients...</p>;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg relative">
-        <button
-          onClick={onClose}
-          className="absolute top-2 right-3 text-gray-600 text-lg"
+    <form onSubmit={handleSubmit} className="space-y-4 p-4 border rounded-md bg-white shadow">
+      <div>
+        <label className="block mb-1 font-semibold">Patient</label>
+        <select
+          name="patient"
+          value={formData.patient}
+          onChange={handleChange}
+          required
+          className="w-full p-2 border rounded"
         >
-          &times;
-        </button>
-
-        <h2 className="text-xl font-bold mb-4">New Diagnosis</h2>
-
-        <form onSubmit={handleSubmit} className="space-y-3 text-black">
-          <label className="flex flex-col">
-            Patient
-            <select
-              name="patient"
-              value={form.patient}
-              onChange={handleChange}
-              className="border px-2 py-1 rounded"
-              required
-            >
-              <option value="">Select Patient</option>
-              {patients.map((p) => (
-                <option key={p._id} value={p._id}>
-                  {p.firstName} {p.lastName} (MRN: {p.mrn})
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="flex flex-col">
-            Diagnosis Type
-            <select
-              name="diagnosisType"
-              value={form.diagnosisType}
-              onChange={handleChange}
-              className="border px-2 py-1 rounded"
-              required
-            >
-              <option value="Pulmonary TB">Pulmonary TB</option>
-              <option value="Extra-pulmonary TB">Extra-pulmonary TB</option>
-              <option value="No TB">No TB</option>
-              <option value="Suspected TB">Suspected TB</option>
-            </select>
-          </label>
-
-          <label className="flex flex-col">
-            Notes
-            <textarea
-              name="notes"
-              value={form.notes}
-              onChange={handleChange}
-              className="border px-2 py-1 rounded"
-              rows="3"
-            />
-          </label>
-
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+          <option value="">-- Select Patient --</option>
+          {patients.map((p) => (
+            <option key={p._id} value={p._id}>
+              {p.firstName} {p.lastName}
+            </option>
+          ))}
+        </select>
       </div>
-    </div>
+
+      <div>
+        <label className="block mb-1 font-semibold">Diagnosis</label>
+        <input
+          type="text"
+          name="diagnosis"
+          value={formData.diagnosis}
+          onChange={handleChange}
+          required
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label className="block mb-1 font-semibold">Notes</label>
+        <textarea
+          name="notes"
+          value={formData.notes}
+          onChange={handleChange}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <button
+        type="submit"
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+      >
+        Save Diagnosis
+      </button>
+    </form>
   );
 };
 
