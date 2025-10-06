@@ -78,10 +78,10 @@ required: true,
 screening: {
 type: mongoose.Schema.Types.ObjectId,
 ref: "Screening",
-required: false, // optional link to screening that led to this test
+required: false, 
 },
 
-```
+
 testType: {
   type: String,
   enum: ["GeneXpert", "Smear Microscopy", "Culture", "Chest X-ray", "Other"],
@@ -147,7 +147,7 @@ voided: { type: Boolean, default: false },
 voidReason: { type: String },
 voidedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 voidedAt: { type: Date },
-```
+
 
 },
 { timestamps: true }
