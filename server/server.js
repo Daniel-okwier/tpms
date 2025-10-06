@@ -33,7 +33,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
-app.use('/api/diagnosis', diagnosisRoutes);
+app.use('/api/diagnoses', diagnosisRoutes);
 app.use('/api/adherence', adherenceRoutes);
 app.use('/api/lab-tests', labTestRoutes);
 app.use('/api/reports', reportRoutes);

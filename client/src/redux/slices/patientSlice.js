@@ -1,9 +1,9 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "@/utils/axios";
 
-// ---------------------------
+
 // Thunks
-// ---------------------------
+
 
 // Fetch patients with pagination
 export const fetchPatients = createAsyncThunk(
