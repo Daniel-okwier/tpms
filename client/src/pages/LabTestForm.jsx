@@ -1,276 +1,266 @@
 
-import React, { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { createLabTest } from "../redux/slices/labTestsSlice";
-import { fetchPatients } from "../redux/slices/patientSlice";
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { createLabTest } from '../redux/slices/labTestsSlice';
+import { fetchPatients } from '../redux/slices/patientSlice';
+import { X } from 'lucide-react';
 
 const LabTestForm = ({ onClose }) => {
   const dispatch = useDispatch();
-
-  const patients = useSelector((state) => state.patients?.items || []);
-  const loadingPatients = useSelector((state) => state.patients?.loading);
+  const { patients } = useSelector((state) => state.patients);
+  const { loading, error, successMessage } = useSelector((state) => state.labTests);
 
   const [formData, setFormData] = useState({
-    patient: "",
-    testType: "",
-    status: "ordered",
-    priority: "routine",
-    specimenType: "",
-    clinicalNotes: "",
-    result: {},
+    patient: '',
+    testTypes: [],
+    tests: {}, 
+    clinicalNotes: '',
+    priority: 'routine',
   });
+
+  const testOptions = [
+    'GeneXpert',
+    'Smear Microscopy',
+    'Culture',
+    'Chest X-ray',
+    'Other',
+  ];
 
   useEffect(() => {
     dispatch(fetchPatients());
   }, [dispatch]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  const handleTestSelect = (testType) => {
+    setFormData((prev) => {
+      const selected = prev.testTypes.includes(testType)
+        ? prev.testTypes.filter((t) => t !== testType)
+        : [...prev.testTypes, testType];
+
+      // Reset test data when unselected
+      const updatedTests = { ...prev.tests };
+      if (!selected.includes(testType)) delete updatedTests[testType];
+
+      return { ...prev, testTypes: selected, tests: updatedTests };
+    });
   };
 
-  const handleResultChange = (e) => {
-    const { name, value } = e.target;
+  const handleResultChange = (testType, field, value) => {
     setFormData((prev) => ({
       ...prev,
-      result: {
-        ...prev.result,
-        [name]: value,
+      tests: {
+        ...prev.tests,
+        [testType]: {
+          ...prev.tests[testType],
+          [field]: value,
+        },
       },
     }));
   };
 
-  const renderResultFields = () => {
-    switch (formData.testType) {
-      case "Sputum Smear Microscopy":
-        return (
-          <div className="space-y-2">
-            <label className="block font-medium text-gray-900">Smear Result</label>
-            <div className="flex gap-4">
-              {["Positive", "Negative"].map((option) => (
-                <label key={option} className="flex items-center gap-1 text-gray-900">
-                  <input
-                    type="radio"
-                    name="smearResult"
-                    value={option}
-                    checked={formData.result.smearResult === option}
-                    onChange={handleResultChange}
-                  />
-                  {option}
-                </label>
-              ))}
-            </div>
-          </div>
-        );
-
-      case "GeneXpert":
-        return (
-          <div className="space-y-2">
-            <label className="block font-medium text-gray-900">MTB Detection</label>
-            <div className="flex gap-4">
-              {["Detected", "Not Detected"].map((option) => (
-                <label key={option} className="flex items-center gap-1 text-gray-900">
-                  <input
-                    type="radio"
-                    name="mtbDetected"
-                    value={option}
-                    checked={formData.result.mtbDetected === option}
-                    onChange={handleResultChange}
-                  />
-                  {option}
-                </label>
-              ))}
-            </div>
-
-            <label className="block font-medium mt-2 text-gray-900">Rifampicin Resistance</label>
-            <div className="flex gap-4">
-              {["Resistant", "Sensitive", "Indeterminate"].map((option) => (
-                <label key={option} className="flex items-center gap-1 text-gray-900">
-                  <input
-                    type="radio"
-                    name="rifResistance"
-                    value={option}
-                    checked={formData.result.rifResistance === option}
-                    onChange={handleResultChange}
-                  />
-                  {option}
-                </label>
-              ))}
-            </div>
-          </div>
-        );
-
-      case "Chest X-ray":
-        return (
-          <div className="space-y-2">
-            <label className="block font-medium text-gray-900">Radiological Impression</label>
-            <select
-              name="xrayResult"
-              value={formData.result.xrayResult || ""}
-              onChange={handleResultChange}
-              className="w-full border p-2 rounded text-gray-900"
-            >
-              <option value="">-- Select Result --</option>
-              <option value="Normal">Normal</option>
-              <option value="Suggestive of TB">Suggestive of TB</option>
-              <option value="Other Pathology">Other Pathology</option>
-            </select>
-          </div>
-        );
-
-      case "Culture Test":
-        return (
-          <div className="space-y-2">
-            <label className="block font-medium text-gray-900">Culture Result</label>
-            <div className="flex gap-4">
-              {["Positive", "Negative", "Contaminated"].map((option) => (
-                <label key={option} className="flex items-center gap-1 text-gray-900">
-                  <input
-                    type="radio"
-                    name="cultureResult"
-                    value={option}
-                    checked={formData.result.cultureResult === option}
-                    onChange={handleResultChange}
-                  />
-                  {option}
-                </label>
-              ))}
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.patient || !formData.testType) {
-      alert("Please select a patient and test type.");
-      return;
-    }
-    dispatch(createLabTest(formData));
-    onClose();
+    const payload = formData.testTypes.map((type) => ({
+      patient: formData.patient,
+      testType: type,
+      clinicalNotes: formData.clinicalNotes,
+      priority: formData.priority,
+      ...formData.tests[type],
+    }));
+    dispatch(createLabTest(payload));
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 relative">
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+      <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-3xl shadow-xl relative">
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-xl"
+          className="absolute top-3 right-3 text-gray-400 hover:text-red-500"
         >
-          ×
+          <X size={20} />
         </button>
-        <h2 className="text-2xl font-semibold mb-4 text-gray-900">
-          Add New Lab Test
+
+        <h2 className="text-2xl font-semibold mb-4 text-center text-blue-600">
+          Create Lab Test Order
         </h2>
 
-        <form onSubmit={handleSubmit} className="space-y-5 text-gray-900">
-          {/* Patient */}
+        {successMessage && (
+          <div className="bg-green-100 text-green-700 p-3 mb-3 rounded">
+            {successMessage}
+          </div>
+        )}
+        {error && (
+          <div className="bg-red-100 text-red-700 p-3 mb-3 rounded">{error}</div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block mb-1 font-medium">Patient</label>
+            <label className="block text-sm font-medium mb-1">Patient</label>
             <select
-              name="patient"
               value={formData.patient}
-              onChange={handleChange}
-              className="w-full border p-2 rounded text-gray-900"
+              onChange={(e) =>
+                setFormData({ ...formData, patient: e.target.value })
+              }
               required
+              className="w-full p-2 border rounded bg-gray-50 dark:bg-gray-800"
             >
-              <option value="">-- Select Patient --</option>
-              {loadingPatients ? (
-                <option>Loading...</option>
-              ) : patients.length > 0 ? (
-                patients.map((p) => (
-                  <option key={p._id} value={p._id}>
-                    {p.firstName} {p.lastName} (MRN: {p.mrn})
-                  </option>
-                ))
-              ) : (
-                <option disabled>No patients found</option>
-              )}
+              <option value="">Select patient</option>
+              {patients.map((p) => (
+                <option key={p._id} value={p._id}>
+                  {p.firstName} {p.lastName} ({p.mrn})
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* Test Type */}
           <div>
-            <label className="block mb-1 font-medium">Test Type</label>
-            <select
-              name="testType"
-              value={formData.testType}
-              onChange={handleChange}
-              className="w-full border p-2 rounded text-gray-900"
-              required
-            >
-              <option value="">-- Select Test Type --</option>
-              <option value="Sputum Smear Microscopy">Sputum Smear Microscopy</option>
-              <option value="GeneXpert">GeneXpert</option>
-              <option value="Chest X-ray">Chest X-ray</option>
-              <option value="Culture Test">Culture Test</option>
-            </select>
-          </div>
-
-          {/* Specimen Type (Radio Buttons) */}
-          <div>
-            <label className="block mb-1 font-medium">Specimen Type</label>
+            <label className="block text-sm font-medium mb-1">Test Types</label>
             <div className="flex flex-wrap gap-3">
-              {["Sputum", "Blood", "Tissue", "Pleural Fluid", "Urine", "Other"].map(
-                (specimen) => (
-                  <label key={specimen} className="flex items-center gap-1 text-gray-900">
-                    <input
-                      type="radio"
-                      name="specimenType"
-                      value={specimen}
-                      checked={formData.specimenType === specimen}
-                      onChange={handleChange}
-                    />
-                    {specimen}
-                  </label>
-                )
-              )}
+              {testOptions.map((testType) => (
+                <label key={testType} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.testTypes.includes(testType)}
+                    onChange={() => handleTestSelect(testType)}
+                    className="accent-blue-600"
+                  />
+                  <span>{testType}</span>
+                </label>
+              ))}
             </div>
           </div>
 
-          {/* Dynamic Result Fields */}
-          {renderResultFields()}
+          {formData.testTypes.map((testType) => (
+            <div key={testType} className="border p-4 rounded-md bg-gray-50 dark:bg-gray-800">
+              <h3 className="font-semibold text-blue-600 mb-2">{testType} Result</h3>
 
-          {/* Clinical Notes */}
+              {testType === 'GeneXpert' && (
+                <>
+                  <div className="flex gap-4 mb-2">
+                    <label>
+                      MTB Detected:
+                      <select
+                        value={formData.tests[testType]?.mtbDetected || ''}
+                        onChange={(e) =>
+                          handleResultChange(testType, 'mtbDetected', e.target.value)
+                        }
+                        className="ml-2 p-1 border rounded"
+                      >
+                        <option value="">Select</option>
+                        <option value="detected">Detected</option>
+                        <option value="not_detected">Not Detected</option>
+                        <option value="indeterminate">Indeterminate</option>
+                      </select>
+                    </label>
+                    <label>
+                      Rif Resistance:
+                      <select
+                        value={formData.tests[testType]?.rifResistance || ''}
+                        onChange={(e) =>
+                          handleResultChange(testType, 'rifResistance', e.target.value)
+                        }
+                        className="ml-2 p-1 border rounded"
+                      >
+                        <option value="">Select</option>
+                        <option value="detected">Detected</option>
+                        <option value="not_detected">Not Detected</option>
+                        <option value="indeterminate">Indeterminate</option>
+                      </select>
+                    </label>
+                  </div>
+                </>
+              )}
+
+              {testType === 'Smear Microscopy' && (
+                <div className="flex gap-4 mb-2">
+                  <label>
+                    Result:
+                    <select
+                      value={formData.tests[testType]?.result || ''}
+                      onChange={(e) =>
+                        handleResultChange(testType, 'result', e.target.value)
+                      }
+                      className="ml-2 p-1 border rounded"
+                    >
+                      <option value="">Select</option>
+                      <option value="positive">Positive</option>
+                      <option value="negative">Negative</option>
+                      <option value="scanty">Scanty</option>
+                    </select>
+                  </label>
+                </div>
+              )}
+
+              {testType === 'Culture' && (
+                <div className="flex gap-4 mb-2">
+                  <label>
+                    Growth:
+                    <select
+                      value={formData.tests[testType]?.growth || ''}
+                      onChange={(e) =>
+                        handleResultChange(testType, 'growth', e.target.value)
+                      }
+                      className="ml-2 p-1 border rounded"
+                    >
+                      <option value="">Select</option>
+                      <option value="positive">Positive</option>
+                      <option value="negative">Negative</option>
+                      <option value="contaminated">Contaminated</option>
+                      <option value="pending">Pending</option>
+                    </select>
+                  </label>
+                </div>
+              )}
+
+              {testType === 'Chest X-ray' && (
+                <div className="flex flex-col gap-2">
+                  <label>
+                    Impression:
+                    <input
+                      type="text"
+                      className="ml-2 p-1 border rounded w-full"
+                      value={formData.tests[testType]?.impression || ''}
+                      onChange={(e) =>
+                        handleResultChange(testType, 'impression', e.target.value)
+                      }
+                    />
+                  </label>
+                  <label>
+                    Cavitation:
+                    <input
+                      type="checkbox"
+                      checked={formData.tests[testType]?.cavitation || false}
+                      onChange={(e) =>
+                        handleResultChange(testType, 'cavitation', e.target.checked)
+                      }
+                      className="ml-2"
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
+          ))}
+
           <div>
-            <label className="block mb-1 font-medium">Clinical Notes</label>
+            <label className="block text-sm font-medium mb-1">Clinical Notes</label>
             <textarea
-              name="clinicalNotes"
               value={formData.clinicalNotes}
-              onChange={handleChange}
-              className="w-full border p-2 rounded text-gray-900 placeholder-gray-500"
-              placeholder="Additional notes..."
+              onChange={(e) =>
+                setFormData({ ...formData, clinicalNotes: e.target.value })
+              }
+              className="w-full p-2 border rounded bg-gray-50 dark:bg-gray-800"
+              rows="3"
             />
           </div>
 
-          {/* Priority */}
-          <div>
-            <label className="block mb-1 font-medium">Priority</label>
-            <select
-              name="priority"
-              value={formData.priority}
-              onChange={handleChange}
-              className="w-full border p-2 rounded text-gray-900"
+          <div className="text-right">
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
             >
-              <option value="routine">Routine</option>
-              <option value="urgent">Urgent</option>
-            </select>
+              {loading ? 'Saving...' : 'Save Tests'}
+            </button>
           </div>
-
-          {/* Submit */}
-          <button
-            type="submit"
-            className="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 transition w-full"
-          >
-            Save Lab Test
-          </button>
         </form>
       </div>
     </div>
@@ -278,4 +268,3 @@ const LabTestForm = ({ onClose }) => {
 };
 
 export default LabTestForm;
-
