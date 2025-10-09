@@ -1,17 +1,17 @@
 import { createSlice, createAsyncThunk, createEntityAdapter } from "@reduxjs/toolkit";
 import api from "@/utils/axios";
 
-// ---------------------------
+
 // Entity Adapter
-// ---------------------------
+
 const adapter = createEntityAdapter({
 selectId: (test) => test._id,
 sortComparer: (a, b) => new Date(b.orderDate) - new Date(a.orderDate),
 });
 
-// ---------------------------
+
 // Initial State
-// ---------------------------
+
 const initialState = adapter.getInitialState({
 loading: "idle", // 'idle' | 'pending' | 'succeeded' | 'failed'
 error: null,
@@ -36,7 +36,9 @@ const token = state?.auth?.token || localStorage.getItem("token");
 return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
+
 // Thunks
+
 
 // Fetch all lab tests
 export const fetchLabTests = createAsyncThunk(
@@ -53,6 +55,7 @@ status: opts.status ?? state.labTests.filters.status,
 sortBy: opts.sortBy ?? state.labTests.sortBy,
 sortDir: opts.sortDir ?? state.labTests.sortDir,
 };
+
 
   const headers = getAuthHeaders(getState);
   const response = await api.get("/lab-tests", { params, headers });
@@ -71,10 +74,11 @@ sortDir: opts.sortDir ?? state.labTests.sortDir,
   return rejectWithValue(err.response?.data || err.message);
 }
 
+
 }
 );
 
-//  Fetch lab tests by patient
+// Fetch lab tests by patient
 export const fetchLabTestsByPatient = createAsyncThunk(
 "labTests/fetchByPatient",
 async (patientId, { getState, rejectWithValue }) => {
@@ -88,13 +92,19 @@ return rejectWithValue(err.response?.data || err.message);
 }
 );
 
-// Create a lab test
-export const createLabTest = createAsyncThunk(
-"labTests/create",
-async (data, { getState, rejectWithValue }) => {
+
+// Create multiple lab tests for one patient
+
+export const createLabTests = createAsyncThunk(
+"labTests/createMany",
+async ({ patientId, tests }, { getState, rejectWithValue }) => {
 try {
 const headers = getAuthHeaders(getState);
-const response = await api.post("/lab-tests", data, { headers });
+const response = await api.post(
+"/lab-tests/multiple",
+{ patientId, tests },
+{ headers }
+);
 return response.data?.data || response.data;
 } catch (err) {
 return rejectWithValue(err.response?.data || err.message);
@@ -130,7 +140,9 @@ return rejectWithValue(err.response?.data || err.message);
 }
 );
 
+
 // Slice
+
 const labTestsSlice = createSlice({
 name: "labTests",
 initialState,
@@ -162,7 +174,7 @@ state.error = action.payload;
 })
 
 
-  //  Fetch by patient
+  // Fetch by patient
   .addCase(fetchLabTestsByPatient.pending, (state) => {
     state.loading = "pending";
     state.error = null;
@@ -177,10 +189,14 @@ state.error = action.payload;
     state.error = action.payload;
   })
 
-  // Create
-  .addCase(createLabTest.fulfilled, (state, action) => {
+  // Create multiple tests
+  .addCase(createLabTests.fulfilled, (state, action) => {
     state.loading = "succeeded";
-    if (action.payload) adapter.addOne(state, action.payload);
+    if (Array.isArray(action.payload)) {
+      adapter.addMany(state, action.payload);
+    } else if (action.payload) {
+      adapter.addOne(state, action.payload);
+    }
   })
 
   // Update
@@ -194,10 +210,13 @@ state.error = action.payload;
     state.loading = "succeeded";
     adapter.removeOne(state, action.payload);
   });
+
 },
 });
 
+
 // Exports
+
 export const { setFilters, setPage } = labTestsSlice.actions;
 export const labTestsSelectors = adapter.getSelectors((state) => state.labTests);
 export default labTestsSlice.reducer;
