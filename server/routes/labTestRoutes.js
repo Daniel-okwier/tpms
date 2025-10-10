@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   createLabTest,
+  createMultipleLabTests,
   getLabTests,
   getLabTestById,
   updateLabTest,
@@ -15,6 +16,14 @@ router
   .route('/')
   .post(protect, authorizeRoles('lab_staff', 'doctor', 'nurse'), createLabTest)
   .get(protect, authorizeRoles('admin', 'doctor', 'nurse', 'lab_staff'), getLabTests);
+
+// /api/lab-tests/multiple
+router.post(
+  '/multiple',
+  protect,
+  authorizeRoles('lab_staff', 'doctor', 'nurse'),
+  createMultipleLabTests
+);
 
 // /api/lab-tests/:id
 router
