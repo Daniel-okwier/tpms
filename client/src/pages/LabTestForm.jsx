@@ -61,25 +61,30 @@ const LabTestForm = ({ onClose }) => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.patient || formData.testTypes.length === 0) return;
-    setSubmitting(true);
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!formData.patient || formData.testTypes.length === 0) return;
+  setSubmitting(true);
 
-    // ✅ Prepare payload as an array directly
-    const payload = formData.testTypes.map((type) => ({
-      patient: formData.patient,
-      testType: type,
-      clinicalNotes: formData.clinicalNotes,
-      priority: formData.priority,
-      ...formData.tests[type],
-    }));
+  //  Prepare payload 
+  const testsPayload = formData.testTypes.map((type) => ({
+    testType: type,
+    clinicalNotes: formData.clinicalNotes,
+    priority: formData.priority,
+    ...formData.tests[type],
+  }));
 
-    console.log("Sending payload:", payload); // 🔍 Debug
-
-    await dispatch(createLabTests(payload));
-    setSubmitting(false);
+  const payload = {
+    patientId: formData.patient,
+    tests: testsPayload,
   };
+
+  console.log("Sending payload:", payload); 
+
+  await dispatch(createLabTests(payload));
+  setSubmitting(false);
+};
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50 overflow-auto">

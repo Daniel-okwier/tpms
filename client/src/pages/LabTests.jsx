@@ -49,15 +49,37 @@ const LabTestsPage = () => {
     setShowForm(true);
   };
 
-  const filteredLabTests = Object.values(labTests || {}).filter((test) => {
+  // ✅ Group lab tests by patient to avoid multiple rows for same patient
+  const groupedLabTests = Object.values(labTests || {}).reduce((acc, test) => {
+    const patientId = test.patient?._id || test.patientId;
+    if (!patientId) return acc;
+
+    if (!acc[patientId]) {
+      acc[patientId] = {
+        ...test,
+        testTypes: [test.testType],
+        allStatuses: [test.status],
+      };
+    } else {
+      acc[patientId].testTypes.push(test.testType);
+      acc[patientId].allStatuses.push(test.status);
+    }
+
+    return acc;
+  }, {});
+
+  // Convert grouped object to array
+  const groupedTestsArray = Object.values(groupedLabTests);
+
+  const filteredLabTests = groupedTestsArray.filter((test) => {
     return (
       (!filters.q ||
         test.patient?.firstName?.toLowerCase().includes(filters.q.toLowerCase()) ||
         test.patient?.lastName?.toLowerCase().includes(filters.q.toLowerCase()) ||
         test.patient?.mrn?.includes(filters.q) ||
         test.patientId?.toLowerCase().includes(filters.q.toLowerCase())) &&
-      (!filters.testType || test.testType === filters.testType) &&
-      (!filters.status || test.status === filters.status)
+      (!filters.testType || test.testTypes.includes(filters.testType)) &&
+      (!filters.status || test.allStatuses.includes(filters.status))
     );
   });
 
@@ -120,8 +142,8 @@ const LabTestsPage = () => {
             <tr className="bg-gray-100 text-gray-700">
               <th className="border px-2 py-2 text-left">Patient</th>
               <th className="border px-2 py-2 text-left">MRN</th>
-              <th className="border px-2 py-2 text-left">Test Type</th>
-              <th className="border px-2 py-2 text-left">Status</th>
+              <th className="border px-2 py-2 text-left">Test Types</th>
+              <th className="border px-2 py-2 text-left">Statuses</th>
               <th className="border px-2 py-2 text-left">Priority</th>
               <th className="border px-2 py-2 text-center">Actions</th>
             </tr>
@@ -153,9 +175,13 @@ const LabTestsPage = () => {
                       : test.patientId || "N/A"}
                   </td>
                   <td className="px-4 py-2">{test.patient?.mrn || "N/A"}</td>
-                  <td className="px-4 py-2">{test.testType}</td>
-                  <td className="px-4 py-2">{test.status}</td>
-                  <td className="px-4 py-2">{test.priority}</td>
+                  <td className="px-4 py-2">
+                    {test.testTypes.join(", ")}
+                  </td>
+                  <td className="px-4 py-2">
+                    {Array.from(new Set(test.allStatuses)).join(", ")}
+                  </td>
+                  <td className="px-4 py-2">{test.priority || "N/A"}</td>
                   <td className="px-4 py-2 flex gap-2 justify-center">
                     <button
                       onClick={() => handleEdit(test)}
