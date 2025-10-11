@@ -64,55 +64,43 @@ const LabTestForm = ({ onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.patient || formData.testTypes.length === 0) return;
-
     setSubmitting(true);
 
-    const tests = formData.testTypes.map((type) => ({
+    // ✅ Prepare payload as an array directly
+    const payload = formData.testTypes.map((type) => ({
+      patient: formData.patient,
       testType: type,
       clinicalNotes: formData.clinicalNotes,
       priority: formData.priority,
       ...formData.tests[type],
     }));
 
-    //Send as object
-    await dispatch(
-      createLabTests({
-        patientId: formData.patient,
-        tests,
-      })
-    );
+    console.log("Sending payload:", payload); // 🔍 Debug
 
+    await dispatch(createLabTests(payload));
     setSubmitting(false);
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50 overflow-auto">
       <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-3xl shadow-xl relative max-h-[90vh] overflow-y-auto text-gray-900 dark:text-gray-100">
-        {/* Close Button */}
         <button
           onClick={onClose}
           className="absolute top-3 right-3 text-gray-400 hover:text-red-500"
         >
           <X size={20} />
         </button>
-
-        {/* Title */}
         <h2 className="text-2xl font-semibold mb-4 text-center text-blue-600">
           Create Lab Test
         </h2>
 
-        {/* Success/Error Messages */}
         {successMessage && (
           <div className="bg-green-100 text-green-800 p-3 mb-3 rounded">
             {successMessage}
           </div>
         )}
         {error && (
-          <div className="bg-red-100 text-red-800 p-3 mb-3 rounded">
-            {typeof error === "string"
-              ? error
-              : error?.error || "An error occurred"}
-          </div>
+          <div className="bg-red-100 text-red-800 p-3 mb-3 rounded">{error}</div>
         )}
         {patientError && (
           <div className="bg-red-100 text-red-800 p-3 mb-3 rounded">
@@ -121,7 +109,7 @@ const LabTestForm = ({ onClose }) => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Patient Selection */}
+          {/* Patient selection */}
           <div>
             <label className="block text-sm font-medium mb-1">Patient</label>
             <select
@@ -147,7 +135,7 @@ const LabTestForm = ({ onClose }) => {
             </select>
           </div>
 
-          {/* Test Type Selection */}
+          {/* Test types */}
           <div>
             <label className="block text-sm font-medium mb-1">Test Types</label>
             <div className="flex flex-wrap gap-3">
@@ -165,7 +153,7 @@ const LabTestForm = ({ onClose }) => {
             </div>
           </div>
 
-          {/* Dynamic Test Result Fields */}
+          {/* Dynamic result fields */}
           {formData.testTypes?.map((testType) => (
             <div
               key={testType}
@@ -175,7 +163,6 @@ const LabTestForm = ({ onClose }) => {
                 {testType} Result
               </h3>
 
-              {/* GeneXpert Test */}
               {testType === "GeneXpert" ? (
                 <>
                   <label>
@@ -218,7 +205,6 @@ const LabTestForm = ({ onClose }) => {
                   </label>
                 </>
               ) : testType === "Chest X-ray" ? (
-                // Chest X-ray Test
                 <div className="flex flex-col gap-2">
                   <label className="font-medium mb-1">
                     Radiological Impression:
@@ -240,7 +226,11 @@ const LabTestForm = ({ onClose }) => {
                           value={value}
                           checked={formData.tests[testType]?.result === value}
                           onChange={(e) =>
-                            handleResultChange(testType, "result", e.target.value)
+                            handleResultChange(
+                              testType,
+                              "result",
+                              e.target.value
+                            )
                           }
                           className="accent-blue-600"
                         />
@@ -250,7 +240,6 @@ const LabTestForm = ({ onClose }) => {
                   </div>
                 </div>
               ) : (
-                // Smear Microscopy / Culture / Other
                 <div className="flex flex-col gap-2">
                   <label className="font-medium mb-1">Result:</label>
                   <div className="flex flex-wrap gap-3">
@@ -312,7 +301,6 @@ const LabTestForm = ({ onClose }) => {
             </select>
           </div>
 
-          {/* Submit Button */}
           <div className="text-right">
             <button
               type="submit"

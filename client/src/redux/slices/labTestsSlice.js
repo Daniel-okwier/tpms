@@ -75,10 +75,17 @@ export const fetchLabTestsByPatient = createAsyncThunk(
 //  Create multiple tests 
 export const createLabTests = createAsyncThunk(
   "labTests/createMany",
-  async ({ patientId, tests }, { getState, rejectWithValue }) => {
+  async (payload, { getState, rejectWithValue }) => {
     try {
+      const { patientId, tests } = payload; 
       const headers = getAuthHeaders(getState);
-      const response = await api.post("/lab-tests/multiple", { patientId, tests }, { headers });
+      
+      const response = await api.post(
+        "/lab-tests/multiple",
+        { patientId, tests },
+        { headers }
+      );
+      
       return response.data?.data || response.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
