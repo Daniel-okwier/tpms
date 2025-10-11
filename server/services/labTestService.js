@@ -29,7 +29,7 @@ export const createLabTestService = async (data, user) => {
 };
 
 // Create multiple lab tests at once
-export const createMultipleLabTestsService = async (tests, user) => {
+export const createMultipleLabTestsService = async ({ patientId, tests }, user) => {
   if (!Array.isArray(tests) || tests.length === 0) {
     throw new ErrorResponse('No lab tests provided', 400);
   }
@@ -37,12 +37,15 @@ export const createMultipleLabTestsService = async (tests, user) => {
   const createdTests = [];
 
   for (const testData of tests) {
-    const patientExists = await Patient.findById(testData.patient);
+    const patientExists = await Patient.findById(patientId);
     if (!patientExists) throw new ErrorResponse('Patient not found', 404);
+
+    // ✅ Ensure patientId is attached
+    testData.patient = patientId;
 
     // Auto-link the latest screening if not provided
     if (!testData.screening) {
-      const latestScreening = await Screening.findOne({ patient: testData.patient })
+      const latestScreening = await Screening.findOne({ patient: patientId })
         .sort({ createdAt: -1 })
         .select('_id');
       if (latestScreening) testData.screening = latestScreening._id;
@@ -52,11 +55,13 @@ export const createMultipleLabTestsService = async (tests, user) => {
       ...testData,
       orderedBy: user._id,
     });
+
     createdTests.push(await labTest.populate('patient', 'firstName lastName mrn'));
   }
 
   return createdTests;
 };
+
 
 // Fetch all lab tests (optionally filtered)
 export const getLabTestsService = async (filters = {}) => {
