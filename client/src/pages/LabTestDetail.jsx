@@ -18,7 +18,14 @@ const LabTestDetail = ({ test, onClose }) => {
         const response = await axios.get(
           `/api/labtests/patient/${test.patient._id}`
         );
-        setPatientTests(response.data);
+
+        // Handle both array and wrapped response formats
+        const data =
+          Array.isArray(response.data)
+            ? response.data
+            : response.data.data || response.data.patientTests || [];
+
+        setPatientTests(data);
       } catch (err) {
         console.error("Error fetching patient lab tests:", err);
         setError("Failed to load patient lab tests.");
@@ -86,7 +93,7 @@ const LabTestDetail = ({ test, onClose }) => {
                 Tests Performed
               </h3>
 
-              {patientTests.length === 0 ? (
+              {Array.isArray(patientTests) && patientTests.length === 0 ? (
                 <p className="text-gray-700">No lab tests found for this patient.</p>
               ) : (
                 <div className="border border-gray-300 rounded-lg overflow-hidden">
@@ -95,35 +102,36 @@ const LabTestDetail = ({ test, onClose }) => {
                     <div>Result</div>
                   </div>
 
-                  {patientTests.map((t) => (
-                    <div
-                      key={t._id}
-                      className="grid grid-cols-2 border-t border-gray-300 bg-gray-50 hover:bg-gray-100 transition duration-150 px-3 py-2 text-gray-900"
-                    >
-                      <div>
-                        <p className="font-medium">{t.testType}</p>
-                        <p className="text-sm text-gray-700">
-                          Status: {t.status}
-                        </p>
-                        <p className="text-sm text-gray-700">
-                          Priority: {t.priority}
-                        </p>
-                        <p className="text-sm text-gray-700">
-                          Specimen: {t.specimenType || "-"}
-                        </p>
-                      </div>
-                      <div className="flex flex-col justify-center">
-                        <p className="font-semibold text-blue-700">
-                          {t.result?.toString() || "Pending"}
-                        </p>
-                        {t.clinicalNotes && (
-                          <p className="text-sm text-gray-700 italic mt-1">
-                            Note: {t.clinicalNotes}
+                  {Array.isArray(patientTests) &&
+                    patientTests.map((t) => (
+                      <div
+                        key={t._id}
+                        className="grid grid-cols-2 border-t border-gray-300 bg-gray-50 hover:bg-gray-100 transition duration-150 px-3 py-2 text-gray-900"
+                      >
+                        <div>
+                          <p className="font-medium">{t.testType}</p>
+                          <p className="text-sm text-gray-700">
+                            Status: {t.status}
                           </p>
-                        )}
+                          <p className="text-sm text-gray-700">
+                            Priority: {t.priority}
+                          </p>
+                          <p className="text-sm text-gray-700">
+                            Specimen: {t.specimenType || "-"}
+                          </p>
+                        </div>
+                        <div className="flex flex-col justify-center">
+                          <p className="font-semibold text-blue-700">
+                            {t.result?.toString() || "Pending"}
+                          </p>
+                          {t.clinicalNotes && (
+                            <p className="text-sm text-gray-700 italic mt-1">
+                              Note: {t.clinicalNotes}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               )}
             </div>
