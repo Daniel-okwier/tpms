@@ -1,41 +1,27 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchLabTestsByPatient, labTestsSelectors } from "../redux/slices/labTestsSlice";
 import LabTestForm from "./LabTestForm";
 
 const LabTestDetail = ({ test, onClose }) => {
+  const dispatch = useDispatch();
   const [showEditForm, setShowEditForm] = useState(false);
-  const [patientTests, setPatientTests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // Fetch all tests for this patient
+  // Redux state selectors
+  const { loading, error } = useSelector((state) => state.labTests);
+  const allTests = useSelector(labTestsSelectors.selectAll);
+
+  // Filter lab tests for this patient only
+  const patientTests = allTests.filter(
+    (t) => t.patient?._id === test?.patient?._id
+  );
+
+  // Fetch tests for this patient on mount
   useEffect(() => {
-    if (!test?.patient?._id) return;
-
-    const fetchPatientTests = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(
-          `/api/labtests/patient/${test.patient._id}`
-        );
-
-        // Handle both array and wrapped response formats
-        const data =
-          Array.isArray(response.data)
-            ? response.data
-            : response.data.data || response.data.patientTests || [];
-
-        setPatientTests(data);
-      } catch (err) {
-        console.error("Error fetching patient lab tests:", err);
-        setError("Failed to load patient lab tests.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPatientTests();
-  }, [test?.patient?._id]);
+    if (test?.patient?._id) {
+      dispatch(fetchLabTestsByPatient(test.patient._id));
+    }
+  }, [dispatch, test?.patient?._id]);
 
   if (!test) return null;
 
@@ -81,19 +67,20 @@ const LabTestDetail = ({ test, onClose }) => {
         </div>
 
         {/* Loading / Error Handling */}
-        {loading ? (
+        {loading === "pending" ? (
           <p className="text-gray-700">Loading patient lab tests...</p>
         ) : error ? (
-          <p className="text-red-500">{error}</p>
+          <p className="text-red-500">
+            {typeof error === "string" ? error : "Failed to load tests"}
+          </p>
         ) : (
           <>
-            {/* Tests Performed */}
             <div>
               <h3 className="font-semibold text-lg mb-3 text-gray-900">
                 Tests Performed
               </h3>
 
-              {Array.isArray(patientTests) && patientTests.length === 0 ? (
+              {patientTests.length === 0 ? (
                 <p className="text-gray-700">No lab tests found for this patient.</p>
               ) : (
                 <div className="border border-gray-300 rounded-lg overflow-hidden">
@@ -102,36 +89,40 @@ const LabTestDetail = ({ test, onClose }) => {
                     <div>Result</div>
                   </div>
 
-                  {Array.isArray(patientTests) &&
-                    patientTests.map((t) => (
-                      <div
-                        key={t._id}
-                        className="grid grid-cols-2 border-t border-gray-300 bg-gray-50 hover:bg-gray-100 transition duration-150 px-3 py-2 text-gray-900"
-                      >
-                        <div>
-                          <p className="font-medium">{t.testType}</p>
-                          <p className="text-sm text-gray-700">
-                            Status: {t.status}
-                          </p>
-                          <p className="text-sm text-gray-700">
-                            Priority: {t.priority}
-                          </p>
-                          <p className="text-sm text-gray-700">
-                            Specimen: {t.specimenType || "-"}
-                          </p>
-                        </div>
-                        <div className="flex flex-col justify-center">
-                          <p className="font-semibold text-blue-700">
-                            {t.result?.toString() || "Pending"}
-                          </p>
-                          {t.clinicalNotes && (
-                            <p className="text-sm text-gray-700 italic mt-1">
-                              Note: {t.clinicalNotes}
-                            </p>
-                          )}
-                        </div>
+                  {patientTests.map((t) => (
+                    <div
+                      key={t._id}
+                      className="grid grid-cols-2 border-t border-gray-300 bg-gray-50 hover:bg-gray-100 transition duration-150 px-3 py-3 text-gray-900"
+                    >
+                      <div>
+                        <p className="font-medium text-gray-900">{t.testType}</p>
+                        <p className="text-sm text-gray-700">
+                          Status: <span className="font-medium">{t.status}</span>
+                        </p>
+                        <p className="text-sm text-gray-700">
+                          Priority: <span className="font-medium">{t.priority}</span>
+                        </p>
+                        <p className="text-sm text-gray-700">
+                          Specimen:{" "}
+                          <span className="font-medium">{t.specimenType || "-"}</span>
+                        </p>
                       </div>
-                    ))}
+                      <div className="flex flex-col justify-center text-right">
+                        <p
+                          className={`font-semibold ${
+                            t.result ? "text-blue-700" : "text-gray-500 italic"
+                          }`}
+                        >
+                          {t.result?.toString() || "Pending"}
+                        </p>
+                        {t.clinicalNotes && (
+                          <p className="text-sm text-gray-700 italic mt-1">
+                            Note: {t.clinicalNotes}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

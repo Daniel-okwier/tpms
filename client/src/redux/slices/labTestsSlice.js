@@ -65,6 +65,7 @@ export const fetchLabTestsByPatient = createAsyncThunk(
     try {
       const headers = getAuthHeaders(getState);
       const response = await api.get(`/lab-tests/patient/${patientId}`, { headers });
+      
       return response.data?.data || response.data || [];
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
@@ -72,7 +73,7 @@ export const fetchLabTestsByPatient = createAsyncThunk(
   }
 );
 
-//  Create multiple tests 
+//Create multiple tests 
 export const createLabTests = createAsyncThunk(
   "labTests/createMany",
   async (payload, { getState, rejectWithValue }) => {
@@ -158,8 +159,9 @@ const labTestsSlice = createSlice({
       })
       .addCase(fetchLabTestsByPatient.fulfilled, (state, action) => {
         state.loading = "succeeded";
-        adapter.setAll(state, action.payload);
-        state.total = action.payload.length ?? 0;
+        const tests = action.payload || [];
+        adapter.setAll(state, tests);
+        state.total = tests.length ?? 0;
       })
       .addCase(fetchLabTestsByPatient.rejected, (state, action) => {
         state.loading = "failed";
