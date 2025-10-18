@@ -5,7 +5,8 @@ import {
   getLabTestsService,
   getLabTestByIdService,
   updateLabTestService,
-  deleteLabTestService
+  deleteLabTestService,
+  getLabTestsByPatientIdService, 
 } from '../services/labTestService.js';
 
 // Create a new lab test
@@ -18,16 +19,24 @@ export const createLabTest = asyncHandler(async (req, res) => {
 export const createMultipleLabTests = asyncHandler(async (req, res) => {
   const { tests, patientId } = req.body;
   const labTests = await createMultipleLabTestsService({ patientId, tests }, req.user);
-  
   res.status(201).json({ success: true, data: labTests });
 });
-
 
 // Get all lab tests
 export const getLabTests = asyncHandler(async (req, res) => {
   const tests = await getLabTestsService(req.query);
   res.status(200).json({ success: true, count: tests.length, data: tests });
 });
+
+//  Get all lab tests by patient ID
+export const getLabTestsByPatientId = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const tests = await getLabTestsByPatientIdService(id, req.user);
+
+  console.log("Found lab tests for patient", id, ":", tests.length);
+  res.status(200).json({ success: true, count: tests.length, data: tests });
+});
+
 
 // Get single lab test
 export const getLabTestById = asyncHandler(async (req, res) => {

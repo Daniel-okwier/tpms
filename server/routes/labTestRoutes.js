@@ -5,19 +5,18 @@ import {
   getLabTests,
   getLabTestById,
   updateLabTest,
-  deleteLabTest
+  deleteLabTest,
+  getLabTestsByPatientId, 
 } from '../controllers/labTestController.js';
 import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// /api/lab-tests
 router
   .route('/')
   .post(protect, authorizeRoles('lab_staff', 'doctor', 'nurse'), createLabTest)
   .get(protect, authorizeRoles('admin', 'doctor', 'nurse', 'lab_staff'), getLabTests);
 
-// /api/lab-tests/multiple
 router.post(
   '/multiple',
   protect,
@@ -25,7 +24,13 @@ router.post(
   createMultipleLabTests
 );
 
-// /api/lab-tests/:id
+router.get(
+  '/patient/:id',
+  protect,
+  authorizeRoles('admin', 'doctor', 'nurse', 'lab_staff', 'patient'),
+  getLabTestsByPatientId
+);
+
 router
   .route('/:id')
   .get(protect, authorizeRoles('admin', 'doctor', 'nurse', 'lab_staff', 'patient'), getLabTestById)

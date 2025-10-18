@@ -2,6 +2,7 @@ import LabTest from '../models/labTest.js';
 import Patient from '../models/patient.js';
 import Screening from '../models/screening.js';
 import ErrorResponse from '../utils/errorResponse.js';
+import mongoose from 'mongoose';
 
 // Utility to verify ownership for patient users
 const isPatientOwner = async (userId, patientId) => {
@@ -15,7 +16,6 @@ export const createLabTestService = async (data, user) => {
   const patientExists = await Patient.findById(data.patient);
   if (!patientExists) throw new ErrorResponse('Patient not found', 404);
 
-  // Auto-link the latest screening if not provided
   if (!data.screening) {
     const latestScreening = await Screening.findOne({ patient: data.patient })
       .sort({ createdAt: -1 })
@@ -40,10 +40,8 @@ export const createMultipleLabTestsService = async ({ patientId, tests }, user) 
     const patientExists = await Patient.findById(patientId);
     if (!patientExists) throw new ErrorResponse('Patient not found', 404);
 
-    // ✅ Ensure patientId is attached
     testData.patient = patientId;
 
-    // Auto-link the latest screening if not provided
     if (!testData.screening) {
       const latestScreening = await Screening.findOne({ patient: patientId })
         .sort({ createdAt: -1 })
@@ -62,7 +60,6 @@ export const createMultipleLabTestsService = async ({ patientId, tests }, user) 
   return createdTests;
 };
 
-
 // Fetch all lab tests (optionally filtered)
 export const getLabTestsService = async (filters = {}) => {
   const query = {};
@@ -73,6 +70,7 @@ export const getLabTestsService = async (filters = {}) => {
   let tests = await LabTest.find(query)
     .populate('patient', 'firstName lastName mrn')
     .populate('orderedBy', 'name role')
+    .populate('verifiedBy', 'name')
     .populate('screening', 'screeningType result')
     .sort({ orderDate: -1 });
 
@@ -94,6 +92,7 @@ export const getLabTestByIdService = async (id, user) => {
   const test = await LabTest.findById(id)
     .populate('patient', 'firstName lastName mrn createdBy')
     .populate('orderedBy', 'name role')
+    .populate('verifiedBy', 'name')
     .populate('screening', 'screeningType result');
 
   if (!test) throw new ErrorResponse('Lab test not found', 404);
@@ -106,12 +105,39 @@ export const getLabTestByIdService = async (id, user) => {
   return test;
 };
 
+// Fetch all lab tests for a specific patient
+export const getLabTestsByPatientIdService = async (patientId, user) => {
+  const patientObjectId = new mongoose.Types.ObjectId(patientId);
+
+  const patientExists = await Patient.findById(patientId);
+  if (!patientExists) throw new ErrorResponse('Patient not found', 404);
+
+  const labTests = await LabTest.find({ patient: patientObjectId })
+    .populate('patient', 'firstName lastName mrn')
+    .populate('orderedBy', 'name role')
+    .populate('verifiedBy', 'name')
+    .populate('screening', 'screeningType result')
+    .sort({ orderDate: -1 });
+
+  if (user.role === 'patient') {
+    const ownsRecord = await isPatientOwner(user._id, patientId);
+    if (!ownsRecord) throw new ErrorResponse('Not authorized', 403);
+  }
+
+  return labTests;
+};
+
 // Update lab test
 export const updateLabTestService = async (id, updates, user) => {
   const test = await LabTest.findById(id);
   if (!test) throw new ErrorResponse('Lab test not found', 404);
 
   Object.assign(test, updates);
+
+  
+  if (updates.result || updates.findings) {
+    test.status = 'completed';
+  }
 
   if (updates.status === 'verified') {
     test.verifiedBy = user._id;
