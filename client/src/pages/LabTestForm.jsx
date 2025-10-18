@@ -13,8 +13,9 @@ const LabTestForm = ({ onClose }) => {
     error: patientError,
   } = useSelector((state) => state.patients || { items: [], loading: false });
 
-  const { error, successMessage } = useSelector((state) => state.labTests || {});
+  const { loading, error } = useSelector((state) => state.labTests || {});
 
+  const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -61,30 +62,42 @@ const LabTestForm = ({ onClose }) => {
     }));
   };
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!formData.patient || formData.testTypes.length === 0) return;
-  setSubmitting(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.patient || formData.testTypes.length === 0) return;
+    setSubmitting(true);
 
-  //  Prepare payload 
-  const testsPayload = formData.testTypes.map((type) => ({
-    testType: type,
-    clinicalNotes: formData.clinicalNotes,
-    priority: formData.priority,
-    ...formData.tests[type],
-  }));
+    // Prepare clean payload
+    const testsPayload = formData.testTypes.map((type) => ({
+      testType: type || "",
+      clinicalNotes: formData.clinicalNotes || "",
+      priority: formData.priority || "routine",
+      ...(formData.tests[type] || {}),
+    }));
 
-  const payload = {
-    patientId: formData.patient,
-    tests: testsPayload,
+    const payload = {
+      patientId: formData.patient,
+      tests: testsPayload,
+    };
+
+    try {
+      const resultAction = await dispatch(createLabTests(payload));
+      if (createLabTests.fulfilled.match(resultAction)) {
+        setSuccess("Lab tests created successfully.");
+      } else {
+        console.error("Creation failed:", resultAction.payload);
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  console.log("Sending payload:", payload); 
-
-  await dispatch(createLabTests(payload));
-  setSubmitting(false);
-};
-
+  const errorText =
+    typeof error === "string"
+      ? error
+      : error?.message || error?.error || JSON.stringify(error || "");
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50 overflow-auto">
@@ -99,13 +112,15 @@ const LabTestForm = ({ onClose }) => {
           Create Lab Test
         </h2>
 
-        {successMessage && (
+        {success && (
           <div className="bg-green-100 text-green-800 p-3 mb-3 rounded">
-            {successMessage}
+            {success}
           </div>
         )}
-        {error && (
-          <div className="bg-red-100 text-red-800 p-3 mb-3 rounded">{error}</div>
+        {errorText && (
+          <div className="bg-red-100 text-red-800 p-3 mb-3 rounded">
+            {errorText}
+          </div>
         )}
         {patientError && (
           <div className="bg-red-100 text-red-800 p-3 mb-3 rounded">
@@ -158,8 +173,8 @@ const LabTestForm = ({ onClose }) => {
             </div>
           </div>
 
-          {/* Dynamic result fields */}
-          {formData.testTypes?.map((testType) => (
+          {/* Dynamic fields */}
+          {formData.testTypes.map((testType) => (
             <div
               key={testType}
               className="border p-4 rounded-md bg-gray-50 dark:bg-gray-800"
@@ -167,112 +182,33 @@ const LabTestForm = ({ onClose }) => {
               <h3 className="font-semibold text-blue-600 mb-2">
                 {testType} Result
               </h3>
-
-              {testType === "GeneXpert" ? (
-                <>
-                  <label>
-                    MTB Detected:
-                    <select
-                      value={formData.tests[testType]?.mtbDetected || ""}
-                      onChange={(e) =>
-                        handleResultChange(
-                          testType,
-                          "mtbDetected",
-                          e.target.value
-                        )
-                      }
-                      className="ml-2 p-1 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              <div className="flex flex-col gap-2">
+                <label className="font-medium mb-1">Result:</label>
+                <div className="flex flex-wrap gap-3">
+                  {["positive", "negative", "indeterminate"].map((value) => (
+                    <label
+                      key={value}
+                      className="flex items-center space-x-2 text-sm"
                     >
-                      <option value="">Select</option>
-                      <option value="detected">Detected</option>
-                      <option value="not_detected">Not Detected</option>
-                      <option value="indeterminate">Indeterminate</option>
-                    </select>
-                  </label>
-                  <label className="block mt-2">
-                    Rif Resistance:
-                    <select
-                      value={formData.tests[testType]?.rifResistance || ""}
-                      onChange={(e) =>
-                        handleResultChange(
-                          testType,
-                          "rifResistance",
-                          e.target.value
-                        )
-                      }
-                      className="ml-2 p-1 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    >
-                      <option value="">Select</option>
-                      <option value="detected">Detected</option>
-                      <option value="not_detected">Not Detected</option>
-                      <option value="indeterminate">Indeterminate</option>
-                    </select>
-                  </label>
-                </>
-              ) : testType === "Chest X-ray" ? (
-                <div className="flex flex-col gap-2">
-                  <label className="font-medium mb-1">
-                    Radiological Impression:
-                  </label>
-                  <div className="flex flex-col gap-2">
-                    {[
-                      "Normal",
-                      "Suggestive of TB",
-                      "Other Abnormality",
-                      "Unclear / Indeterminate",
-                    ].map((value) => (
-                      <label
-                        key={value}
-                        className="flex items-center space-x-2 text-sm"
-                      >
-                        <input
-                          type="radio"
-                          name={`result-${testType}`}
-                          value={value}
-                          checked={formData.tests[testType]?.result === value}
-                          onChange={(e) =>
-                            handleResultChange(
-                              testType,
-                              "result",
-                              e.target.value
-                            )
-                          }
-                          className="accent-blue-600"
-                        />
-                        <span>{value}</span>
-                      </label>
-                    ))}
-                  </div>
+                      <input
+                        type="radio"
+                        name={`result-${testType}`}
+                        value={value}
+                        checked={formData.tests[testType]?.result === value}
+                        onChange={(e) =>
+                          handleResultChange(
+                            testType,
+                            "result",
+                            e.target.value
+                          )
+                        }
+                        className="accent-blue-600"
+                      />
+                      <span className="capitalize">{value}</span>
+                    </label>
+                  ))}
                 </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <label className="font-medium mb-1">Result:</label>
-                  <div className="flex flex-wrap gap-3">
-                    {["positive", "negative", "indeterminate"].map((value) => (
-                      <label
-                        key={value}
-                        className="flex items-center space-x-2 text-sm"
-                      >
-                        <input
-                          type="radio"
-                          name={`result-${testType}`}
-                          value={value}
-                          checked={formData.tests[testType]?.result === value}
-                          onChange={(e) =>
-                            handleResultChange(
-                              testType,
-                              "result",
-                              e.target.value
-                            )
-                          }
-                          className="accent-blue-600"
-                        />
-                        <span className="capitalize">{value}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           ))}
 
@@ -309,10 +245,12 @@ const LabTestForm = ({ onClose }) => {
           <div className="text-right">
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || loading === "pending"}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
             >
-              {submitting ? "Saving..." : "Save Tests"}
+              {submitting || loading === "pending"
+                ? "Saving..."
+                : "Save Tests"}
             </button>
           </div>
         </form>
