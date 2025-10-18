@@ -9,6 +9,7 @@ const adapter = createEntityAdapter({
 const initialState = adapter.getInitialState({
   loading: "idle",
   error: null,
+  successMessage: null,
   total: 0,
   page: 1,
   limit: 12,
@@ -23,7 +24,7 @@ const getAuthHeaders = (getState) => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-// Fetch all lab tests
+// Fetch lab tests
 export const fetchLabTests = createAsyncThunk(
   "labTests/fetch",
   async (opts = {}, { getState, rejectWithValue }) => {
@@ -41,19 +42,12 @@ export const fetchLabTests = createAsyncThunk(
 
       const headers = getAuthHeaders(getState);
       const response = await api.get("/lab-tests", { params, headers });
+      const data = response.data?.data || response.data?.labTests || response.data || [];
+      const count = response.data?.count ?? (Array.isArray(data) ? data.length : 0);
 
-      const records =
-        response.data?.data ||
-        response.data?.labTests ||
-        response.data ||
-        [];
-      const count =
-        response.data?.count ??
-        (Array.isArray(records) ? records.length : 0);
-
-      return { data: records, count };
+      return { data, count };
     } catch (err) {
-      return rejectWithValue(err.response?.data || err.message);
+      return rejectWithValue(err.response?.data?.error || "Failed to fetch lab tests.");
     }
   }
 );
@@ -65,31 +59,32 @@ export const fetchLabTestsByPatient = createAsyncThunk(
     try {
       const headers = getAuthHeaders(getState);
       const response = await api.get(`/lab-tests/patient/${patientId}`, { headers });
-      
       return response.data?.data || response.data || [];
     } catch (err) {
-      return rejectWithValue(err.response?.data || err.message);
+      return rejectWithValue(err.response?.data?.error || "Failed to fetch lab tests for patient.");
     }
   }
 );
 
-//Create multiple tests 
+// Create multiple lab tests
 export const createLabTests = createAsyncThunk(
   "labTests/createMany",
   async (payload, { getState, rejectWithValue }) => {
     try {
-      const { patientId, tests } = payload; 
+      const { patientId, tests } = payload;
       const headers = getAuthHeaders(getState);
-      
+
       const response = await api.post(
         "/lab-tests/multiple",
         { patientId, tests },
         { headers }
       );
-      
-      return response.data?.data || response.data;
+
+      // normalize backend response
+      const data = response.data?.data || response.data || [];
+      return Array.isArray(data) ? data : [data];
     } catch (err) {
-      return rejectWithValue(err.response?.data || err.message);
+      return rejectWithValue(err.response?.data?.error || "Failed to create lab tests.");
     }
   }
 );
@@ -103,7 +98,7 @@ export const updateLabTest = createAsyncThunk(
       const response = await api.put(`/lab-tests/${id}`, updates, { headers });
       return response.data?.data || response.data;
     } catch (err) {
-      return rejectWithValue(err.response?.data || err.message);
+      return rejectWithValue(err.response?.data?.error || "Failed to update lab test.");
     }
   }
 );
@@ -117,7 +112,7 @@ export const deleteLabTest = createAsyncThunk(
       await api.delete(`/lab-tests/${id}`, { headers });
       return id;
     } catch (err) {
-      return rejectWithValue(err.response?.data || err.message);
+      return rejectWithValue(err.response?.data?.error || "Failed to delete lab test.");
     }
   }
 );
@@ -126,6 +121,10 @@ const labTestsSlice = createSlice({
   name: "labTests",
   initialState,
   reducers: {
+    clearMessages(state) {
+      state.error = null;
+      state.successMessage = null;
+    },
     setFilters(state, action) {
       state.filters = action.payload;
       state.page = 1;
@@ -136,70 +135,67 @@ const labTestsSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Fetch all
+      // FETCH
       .addCase(fetchLabTests.pending, (state) => {
         state.loading = "pending";
         state.error = null;
+        state.successMessage = null;
       })
       .addCase(fetchLabTests.fulfilled, (state, action) => {
         state.loading = "succeeded";
-        const records = action.payload.data || [];
-        adapter.setAll(state, records);
-        state.total = action.payload.count ?? records.length;
+        adapter.setAll(state, action.payload.data);
+        state.total = action.payload.count;
       })
       .addCase(fetchLabTests.rejected, (state, action) => {
         state.loading = "failed";
         state.error = action.payload;
       })
 
-      // Fetch by patient
+      // FETCH BY PATIENT
       .addCase(fetchLabTestsByPatient.pending, (state) => {
         state.loading = "pending";
         state.error = null;
       })
       .addCase(fetchLabTestsByPatient.fulfilled, (state, action) => {
         state.loading = "succeeded";
-        const tests = action.payload || [];
-        adapter.setAll(state, tests);
-        state.total = tests.length ?? 0;
+        adapter.setAll(state, action.payload);
+        state.total = action.payload.length;
       })
       .addCase(fetchLabTestsByPatient.rejected, (state, action) => {
         state.loading = "failed";
         state.error = action.payload;
       })
 
-      // Create multiple tests
-      .addCase(createLabTests.fulfilled, (state, action) => {
-        state.loading = "succeeded";
-        if (Array.isArray(action.payload)) {
-          adapter.addMany(state, action.payload);
-        } else if (action.payload) {
-          adapter.addOne(state, action.payload);
-        }
-      })
+      // CREATE MANY
       .addCase(createLabTests.pending, (state) => {
         state.loading = "pending";
         state.error = null;
+        state.successMessage = null;
+      })
+      .addCase(createLabTests.fulfilled, (state, action) => {
+        state.loading = "succeeded";
+        adapter.addMany(state, action.payload);
+        state.successMessage = "Lab tests created successfully.";
       })
       .addCase(createLabTests.rejected, (state, action) => {
         state.loading = "failed";
         state.error = action.payload;
       })
 
-      // Update
+      // UPDATE
       .addCase(updateLabTest.fulfilled, (state, action) => {
-        state.loading = "succeeded";
         if (action.payload) adapter.upsertOne(state, action.payload);
+        state.successMessage = "Lab test updated successfully.";
       })
 
-      // Delete
+      // DELETE
       .addCase(deleteLabTest.fulfilled, (state, action) => {
-        state.loading = "succeeded";
         adapter.removeOne(state, action.payload);
+        state.successMessage = "Lab test deleted successfully.";
       });
   },
 });
 
-export const { setFilters, setPage } = labTestsSlice.actions;
+export const { setFilters, setPage, clearMessages } = labTestsSlice.actions;
 export const labTestsSelectors = adapter.getSelectors((state) => state.labTests);
 export default labTestsSlice.reducer;
