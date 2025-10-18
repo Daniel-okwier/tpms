@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchLabTestsByPatient, labTestsSelectors } from "../redux/slices/labTestsSlice";
+import {
+  fetchLabTestsByPatient,
+  fetchLabTests,
+  labTestsSelectors,
+} from "../redux/slices/labTestsSlice";
 import LabTestForm from "./LabTestForm";
 
 const LabTestDetail = ({ test, onClose }) => {
   const dispatch = useDispatch();
   const [showEditForm, setShowEditForm] = useState(false);
 
-  // Redux state selectors
   const { loading, error } = useSelector((state) => state.labTests);
   const allTests = useSelector(labTestsSelectors.selectAll);
 
@@ -23,6 +26,12 @@ const LabTestDetail = ({ test, onClose }) => {
     }
   }, [dispatch, test?.patient?._id]);
 
+  // When closing the detail drawer, reset tests to show all again
+  const handleClose = () => {
+    dispatch(fetchLabTests());
+    onClose();
+  };
+
   if (!test) return null;
 
   return (
@@ -30,7 +39,7 @@ const LabTestDetail = ({ test, onClose }) => {
       {/* Overlay */}
       <div
         className="fixed inset-0 bg-black bg-opacity-40 z-40"
-        onClick={onClose}
+        onClick={handleClose}
       ></div>
 
       {/* Drawer */}
@@ -38,7 +47,7 @@ const LabTestDetail = ({ test, onClose }) => {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-900">Lab Test Details</h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-gray-700 font-bold text-lg hover:text-gray-900"
           >
             ×
@@ -81,7 +90,9 @@ const LabTestDetail = ({ test, onClose }) => {
               </h3>
 
               {patientTests.length === 0 ? (
-                <p className="text-gray-700">No lab tests found for this patient.</p>
+                <p className="text-gray-700">
+                  No lab tests found for this patient.
+                </p>
               ) : (
                 <div className="border border-gray-300 rounded-lg overflow-hidden">
                   <div className="grid grid-cols-2 bg-gray-200 font-semibold text-gray-800 py-2 px-3">
@@ -97,27 +108,37 @@ const LabTestDetail = ({ test, onClose }) => {
                       <div>
                         <p className="font-medium text-gray-900">{t.testType}</p>
                         <p className="text-sm text-gray-700">
-                          Status: <span className="font-medium">{t.status}</span>
+                          Status:{" "}
+                          <span className="font-medium capitalize">
+                            {t.status || "pending"}
+                          </span>
                         </p>
                         <p className="text-sm text-gray-700">
-                          Priority: <span className="font-medium">{t.priority}</span>
+                          Priority:{" "}
+                          <span className="font-medium">
+                            {t.priority || "-"}
+                          </span>
                         </p>
                         <p className="text-sm text-gray-700">
                           Specimen:{" "}
-                          <span className="font-medium">{t.specimenType || "-"}</span>
+                          <span className="font-medium">
+                            {t.specimenType || "-"}
+                          </span>
                         </p>
                       </div>
                       <div className="flex flex-col justify-center text-right">
                         <p
                           className={`font-semibold ${
-                            t.result ? "text-blue-700" : "text-gray-500 italic"
+                            t.result
+                              ? "text-blue-700"
+                              : "text-gray-500 italic"
                           }`}
                         >
                           {t.result?.toString() || "Pending"}
                         </p>
-                        {t.clinicalNotes && (
+                        {t.resultNote && (
                           <p className="text-sm text-gray-700 italic mt-1">
-                            Note: {t.clinicalNotes}
+                            Note: {t.resultNote}
                           </p>
                         )}
                       </div>
@@ -126,6 +147,16 @@ const LabTestDetail = ({ test, onClose }) => {
                 </div>
               )}
             </div>
+
+            {/*Clinical Summary Note */}
+            {test.clinicalNotes && (
+              <div className="mt-6 border-t border-gray-300 pt-4">
+                <h4 className="font-semibold text-gray-900 mb-2">
+                  Clinical Summary
+                </h4>
+                <p className="text-gray-800 italic">{test.clinicalNotes}</p>
+              </div>
+            )}
           </>
         )}
 
@@ -142,7 +173,10 @@ const LabTestDetail = ({ test, onClose }) => {
 
       {/* Edit Modal */}
       {showEditForm && (
-        <LabTestForm onClose={() => setShowEditForm(false)} existingTest={test} />
+        <LabTestForm
+          onClose={() => setShowEditForm(false)}
+          existingTest={test}
+        />
       )}
     </>
   );
