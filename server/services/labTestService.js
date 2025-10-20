@@ -34,23 +34,25 @@ export const createMultipleLabTestsService = async ({ patientId, tests }, user) 
     throw new ErrorResponse('No lab tests provided', 400);
   }
 
+  const patientExists = await Patient.findById(patientId);
+  if (!patientExists) throw new ErrorResponse('Patient not found', 404);
+
+  // Prevent duplicate
+  const existing = await LabTest.findOne({ patient: patientId });
+  if (existing) {
+    throw new ErrorResponse('Lab test already exists for this patient', 400);
+  }
+
   const createdTests = [];
-
   for (const testData of tests) {
-    const patientExists = await Patient.findById(patientId);
-    if (!patientExists) throw new ErrorResponse('Patient not found', 404);
-
-    testData.patient = patientId;
-
-    if (!testData.screening) {
-      const latestScreening = await Screening.findOne({ patient: patientId })
-        .sort({ createdAt: -1 })
-        .select('_id');
-      if (latestScreening) testData.screening = latestScreening._id;
-    }
+    const normalizedPriority =
+      testData.priority === 'urgent' ? 'stat' : testData.priority;
 
     const labTest = await LabTest.create({
       ...testData,
+      patient: patientId,
+      priority: normalizedPriority,
+      status: 'completed',
       orderedBy: user._id,
     });
 

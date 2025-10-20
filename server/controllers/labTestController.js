@@ -22,6 +22,7 @@ export const createMultipleLabTests = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data: labTests });
 });
 
+
 // Get all lab tests
 export const getLabTests = asyncHandler(async (req, res) => {
   const tests = await getLabTestsService(req.query);
