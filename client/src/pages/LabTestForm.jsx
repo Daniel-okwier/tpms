@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { createLabTests, updateLabTest } from "../redux/slices/labTestsSlice";
+import { createLabTests, updateLabTest, fetchLabTests } from "../redux/slices/labTestsSlice";
 import { fetchPatients } from "../redux/slices/patientSlice";
 import { X } from "lucide-react";
 import { toast } from "react-toastify";
@@ -9,6 +9,7 @@ const LabTestForm = ({ onClose, existingTest = null }) => {
   const dispatch = useDispatch();
   const { items: patients = [], loading: patientLoading } =
     useSelector((state) => state.patients || {});
+  const { entities: labTests = [] } = useSelector((state) => state.labTests || {});
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -17,7 +18,6 @@ const LabTestForm = ({ onClose, existingTest = null }) => {
     testTypes: [],
     tests: {},
     clinicalNotes: "",
-    priority: "routine",
   });
 
   const testOptions = [
@@ -37,28 +37,22 @@ const LabTestForm = ({ onClose, existingTest = null }) => {
 
     const initial = {
       patient: existingTest.patient?._id || existingTest.patientId || "",
-      testTypes: existingTest.testType ? [existingTest.testType] : [],
+      testTypes: existingTest.testTypes || [existingTest.testType],
       tests: {},
       clinicalNotes: existingTest.clinicalNotes || "",
-      priority: existingTest.priority || "routine",
     };
 
-    if (existingTest.testType) {
-      const t = existingTest.testType;
-      const testObj = {};
-      if (existingTest.mtbDetected !== undefined)
-        testObj.mtbDetected = existingTest.mtbDetected;
-      if (existingTest.rifResistance !== undefined)
-        testObj.rifResistance = existingTest.rifResistance;
-      if (existingTest.result !== undefined) testObj.result = existingTest.result;
-      initial.tests[t] = testObj;
-    }
+    (existingTest.testTypes || [existingTest.testType]).forEach((type) => {
+      initial.tests[type] = {
+        result: existingTest.result || "",
+      };
+    });
 
     setFormData(initial);
   }, [existingTest]);
 
   const handleTestSelect = (testType) => {
-    if (existingTest) return;
+    if (existingTest) return; 
     setFormData((prev) => {
       const selected = prev.testTypes.includes(testType)
         ? prev.testTypes.filter((t) => t !== testType)
@@ -88,7 +82,6 @@ const LabTestForm = ({ onClose, existingTest = null }) => {
       testTypes: [],
       tests: {},
       clinicalNotes: "",
-      priority: "routine",
     });
   };
 
@@ -101,44 +94,46 @@ const LabTestForm = ({ onClose, existingTest = null }) => {
 
     setSubmitting(true);
     try {
-    
-      const normalizedPriority =
-        formData.priority === "urgent" ? "stat" : formData.priority;
+      // prevent duplicate test creation
+      const existingPatientTest = Object.values(labTests).find(
+        (t) => t.patient?._id === formData.patient
+      );
+
+      if (!existingTest && existingPatientTest) {
+        toast.error("A lab test already exists for this patient.");
+        setSubmitting(false);
+        return;
+      }
 
       if (existingTest) {
         const updates = {
           clinicalNotes: formData.clinicalNotes,
-          priority: normalizedPriority,
-          ...formData.tests[formData.testTypes[0]],
+          tests: formData.tests,
         };
-        await dispatch(
-          updateLabTest({ id: existingTest._id, updates })
-        ).unwrap();
+        await dispatch(updateLabTest({ id: existingTest._id, updates })).unwrap();
         toast.success("Lab test updated successfully");
-        if (onClose) onClose();
+        dispatch(fetchLabTests());
+        onClose();
       } else {
         const testsPayload = formData.testTypes.map((type) => ({
           testType: type,
           clinicalNotes: formData.clinicalNotes,
-          priority: normalizedPriority,
           ...formData.tests[type],
+          status: "completed",
         }));
 
         const payload = { patientId: formData.patient, tests: testsPayload };
-
         await dispatch(createLabTests(payload)).unwrap();
         toast.success("Lab tests created successfully");
         clearForm();
-        if (onClose) onClose();
+        dispatch(fetchLabTests());
+        onClose();
       }
     } catch (err) {
       const msg =
-        err?.message?.includes("already exists") ||
-        err?.error?.includes("already exists")
-          ? "A lab test already exists for this patient."
-          : err?.error ||
-            err?.message ||
-            "An unexpected error occurred. Please try again.";
+        err?.error ||
+        err?.message ||
+        "An unexpected error occurred. Please try again.";
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -293,21 +288,6 @@ const LabTestForm = ({ onClose, existingTest = null }) => {
               className="w-full p-2 border rounded bg-gray-50 dark:bg-gray-800"
               rows="3"
             />
-          </div>
-
-          {/* Priority */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Priority</label>
-            <select
-              value={formData.priority}
-              onChange={(e) =>
-                setFormData({ ...formData, priority: e.target.value })
-              }
-              className="w-full p-2 border rounded bg-gray-50 dark:bg-gray-800"
-            >
-              <option value="routine">Routine</option>
-              <option value="urgent">Urgent</option>
-            </select>
           </div>
 
           <div className="text-right">

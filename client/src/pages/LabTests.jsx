@@ -8,24 +8,15 @@ import { toast } from "react-toastify";
 
 const LabTestsPage = () => {
   const dispatch = useDispatch();
-
-  // Lab tests
   const { entities: labTests, loading, error } = useSelector(
     (state) => state.labTests
   );
-
-  // Patients
   const patients = useSelector((state) => state.patients.items || []);
 
   const [showForm, setShowForm] = useState(false);
   const [selectedTest, setSelectedTest] = useState(null);
   const [showDetail, setShowDetail] = useState(false);
-
-  const [filters, setFilters] = useState({
-    q: "",
-    testType: "",
-    status: "",
-  });
+  const [filters, setFilters] = useState({ q: "", testType: "", status: "" });
 
   useEffect(() => {
     dispatch(fetchLabTests());
@@ -49,7 +40,7 @@ const LabTestsPage = () => {
     setShowForm(true);
   };
 
-  // ✅ Group lab tests by patient to avoid multiple rows for same patient
+  // Group by patient
   const groupedLabTests = Object.values(labTests || {}).reduce((acc, test) => {
     const patientId = test.patient?._id || test.patientId;
     if (!patientId) return acc;
@@ -68,16 +59,18 @@ const LabTestsPage = () => {
     return acc;
   }, {});
 
-  // Convert grouped object to array
   const groupedTestsArray = Object.values(groupedLabTests);
 
   const filteredLabTests = groupedTestsArray.filter((test) => {
     return (
       (!filters.q ||
-        test.patient?.firstName?.toLowerCase().includes(filters.q.toLowerCase()) ||
-        test.patient?.lastName?.toLowerCase().includes(filters.q.toLowerCase()) ||
-        test.patient?.mrn?.includes(filters.q) ||
-        test.patientId?.toLowerCase().includes(filters.q.toLowerCase())) &&
+        test.patient?.firstName
+          ?.toLowerCase()
+          .includes(filters.q.toLowerCase()) ||
+        test.patient?.lastName
+          ?.toLowerCase()
+          .includes(filters.q.toLowerCase()) ||
+        test.patient?.mrn?.includes(filters.q)) &&
       (!filters.testType || test.testTypes.includes(filters.testType)) &&
       (!filters.status || test.allStatuses.includes(filters.status))
     );
@@ -85,7 +78,7 @@ const LabTestsPage = () => {
 
   return (
     <div className="p-4">
-      {/* Title + New button */}
+      {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold text-white">Lab Tests</h1>
         <button
@@ -103,7 +96,7 @@ const LabTestsPage = () => {
       <div className="flex gap-2 mb-4 flex-wrap">
         <input
           type="text"
-          placeholder="Search by patient name, MRN, or ID"
+          placeholder="Search by patient name or MRN"
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
           className="border px-2 py-1 rounded text-black"
@@ -120,19 +113,6 @@ const LabTestsPage = () => {
           <option value="Chest X-ray">Chest X-ray</option>
           <option value="Other">Other</option>
         </select>
-        <select
-          value={filters.status}
-          onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          className="border px-2 py-1 rounded text-black"
-        >
-          <option value="">All Status</option>
-          <option value="ordered">Ordered</option>
-          <option value="specimen_collected">Specimen Collected</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-          <option value="verified">Verified</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
       </div>
 
       {/* Table */}
@@ -144,14 +124,13 @@ const LabTestsPage = () => {
               <th className="border px-2 py-2 text-left">MRN</th>
               <th className="border px-2 py-2 text-left">Test Types</th>
               <th className="border px-2 py-2 text-left">Statuses</th>
-              <th className="border px-2 py-2 text-left">Priority</th>
               <th className="border px-2 py-2 text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading === "pending" && (
               <tr>
-                <td colSpan="6" className="text-center py-4">
+                <td colSpan="5" className="text-center py-4">
                   Loading lab tests...
                 </td>
               </tr>
@@ -159,8 +138,10 @@ const LabTestsPage = () => {
 
             {error && (
               <tr>
-                <td colSpan="6" className="text-center text-red-500 py-4">
-                  {typeof error === "string" ? error : "Failed to load lab tests"}
+                <td colSpan="5" className="text-center text-red-500 py-4">
+                  {typeof error === "string"
+                    ? error
+                    : "Failed to load lab tests"}
                 </td>
               </tr>
             )}
@@ -172,16 +153,13 @@ const LabTestsPage = () => {
                   <td className="px-4 py-2">
                     {test.patient
                       ? `${test.patient.firstName} ${test.patient.lastName}`
-                      : test.patientId || "N/A"}
+                      : "N/A"}
                   </td>
                   <td className="px-4 py-2">{test.patient?.mrn || "N/A"}</td>
-                  <td className="px-4 py-2">
-                    {test.testTypes.join(", ")}
-                  </td>
+                  <td className="px-4 py-2">{test.testTypes.join(", ")}</td>
                   <td className="px-4 py-2">
                     {Array.from(new Set(test.allStatuses)).join(", ")}
                   </td>
-                  <td className="px-4 py-2">{test.priority || "N/A"}</td>
                   <td className="px-4 py-2 flex gap-2 justify-center">
                     <button
                       onClick={() => handleEdit(test)}
@@ -212,7 +190,7 @@ const LabTestsPage = () => {
               !error &&
               filteredLabTests.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="text-center py-4">
+                  <td colSpan="5" className="text-center py-4">
                     No lab tests found
                   </td>
                 </tr>
@@ -231,7 +209,10 @@ const LabTestsPage = () => {
       )}
 
       {showDetail && (
-        <LabTestDetail test={selectedTest} onClose={() => setShowDetail(false)} />
+        <LabTestDetail
+          test={selectedTest}
+          onClose={() => setShowDetail(false)}
+        />
       )}
     </div>
   );
