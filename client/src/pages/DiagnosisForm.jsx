@@ -54,7 +54,6 @@ return ( <form
    className="p-4 border rounded bg-white shadow space-y-4"  
  > <h2 className="text-lg font-bold">Add Diagnosis</h2>
 
-```
   {/* Patient Dropdown */}  
   <div>  
     <label className="block mb-1">Patient</label>  
