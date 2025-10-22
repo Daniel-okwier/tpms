@@ -27,7 +27,7 @@ export const createDiagnosis = createAsyncThunk('diagnosis/create', async (paylo
     const { data } = await diagnosisApi.create(payload);
     return data.data;
   } catch (err) {
-    return thunkAPI.rejectWithValue(err.response?.data?.message || err.message);
+    return thunkAPI.rejectWithValue(err.response?.data || err.message);
   }
 });
 
@@ -37,7 +37,7 @@ export const updateDiagnosis = createAsyncThunk('diagnosis/update', async ({ id,
     const { data } = await diagnosisApi.update(id, updates);
     return data.data;
   } catch (err) {
-    return thunkAPI.rejectWithValue(err.response?.data?.message || err.message);
+    return thunkAPI.rejectWithValue(err.response?.data || err.message);
   }
 });
 
