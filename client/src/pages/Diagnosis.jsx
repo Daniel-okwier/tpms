@@ -1,9 +1,8 @@
-// frontend/src/pages/DiagnosisPage.jsx
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchDiagnoses, deleteDiagnosis } from '../redux/slices/diagnosisSlice';
 import DiagnosisForm from './DiagnosisForm';
-import DiagnosisDetail from './DiagnosisDetail';
+import DiagnosisDetail from './DiagnosisDetails';
 import { toast } from 'react-toastify';
 
 const DiagnosisPage = () => {
