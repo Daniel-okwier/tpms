@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchDiagnoses, deleteDiagnosis } from '../redux/slices/diagnosisSlice';
-import DiagnosisForm from './DiagnosisForm';
-import DiagnosisDetail from './DiagnosisDetails';
-import { toast } from 'react-toastify';
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchDiagnoses, deleteDiagnosis } from "../redux/slices/diagnosisSlice";
+import DiagnosisForm from "./DiagnosisForm";
+import DiagnosisDetail from "./DiagnosisDetails";
+import { toast } from "react-toastify";
 
 const DiagnosisPage = () => {
   const dispatch = useDispatch();
@@ -18,13 +18,13 @@ const DiagnosisPage = () => {
   }, [dispatch]);
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this diagnosis?')) return;
+    if (!window.confirm("Are you sure you want to delete this diagnosis?")) return;
     try {
       await dispatch(deleteDiagnosis(id)).unwrap();
-      toast.success('Diagnosis deleted');
+      toast.success("Diagnosis deleted successfully");
       dispatch(fetchDiagnoses());
     } catch (err) {
-      toast.error(err?.message || 'Failed to delete diagnosis');
+      toast.error(err?.message || "Failed to delete diagnosis");
     }
   };
 
@@ -37,7 +37,7 @@ const DiagnosisPage = () => {
             setSelected(null);
             setShowForm(true);
           }}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 shadow"
         >
           New Diagnosis
         </button>
@@ -59,30 +59,36 @@ const DiagnosisPage = () => {
               <tr><td colSpan="5" className="text-center py-4">Loading...</td></tr>
             )}
             {error && (
-              <tr><td colSpan="5" className="text-center text-red-500 py-4">{error || 'Failed to load'}</td></tr>
+              <tr><td colSpan="5" className="text-center text-red-500 py-4">{error || "Failed to load"}</td></tr>
             )}
             {!loading && !error && diagnoses.length === 0 && (
               <tr><td colSpan="5" className="text-center py-4">No diagnoses found</td></tr>
             )}
             {!loading && !error && diagnoses.map((d) => (
               <tr key={d._id} className="border-b hover:bg-gray-50">
-                <td className="px-4 py-2">{d.patient ? `${d.patient.firstName} ${d.patient.lastName}` : 'N/A'}</td>
-                <td className="px-4 py-2">{d.patient?.mrn || 'N/A'}</td>
+                <td className="px-4 py-2">{d.patient ? `${d.patient.firstName} ${d.patient.lastName}` : "N/A"}</td>
+                <td className="px-4 py-2">{d.patient?.mrn || "N/A"}</td>
                 <td className="px-4 py-2">{d.diagnosisType}</td>
                 <td className="px-4 py-2">{new Date(d.diagnosisDate).toLocaleDateString()}</td>
                 <td className="px-4 py-2 flex gap-2 justify-center">
                   <button
                     onClick={() => { setSelected(d); setShowForm(true); }}
                     className="px-3 py-1 rounded bg-yellow-500 text-white hover:bg-yellow-600 shadow"
-                  >Edit</button>
+                  >
+                    Edit
+                  </button>
                   <button
                     onClick={() => handleDelete(d._id)}
                     className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600 shadow"
-                  >Delete</button>
+                  >
+                    Delete
+                  </button>
                   <button
-                    onClick={() => { setSelected(d); setShowDetail(true);}}
+                    onClick={() => { setSelected(d); setShowDetail(true); }}
                     className="px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 shadow"
-                  >Details</button>
+                  >
+                    Details
+                  </button>
                 </td>
               </tr>
             ))}
