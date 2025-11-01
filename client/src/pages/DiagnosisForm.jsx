@@ -1,34 +1,44 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { createDiagnosis } from "../redux/slices/diagnosisSlice";
+import {
+  createDiagnosis,
+  updateDiagnosis,
+} from "../redux/slices/diagnosisSlice";
 import { fetchPatients } from "../redux/slices/patientSlice";
-import { fetchLabTestsByPatient, labTestsSelectors } from "../redux/slices/labTestsSlice";
+import {
+  fetchLabTestsByPatient,
+  labTestsSelectors,
+} from "../redux/slices/labTestsSlice";
 import { toast } from "react-toastify";
 
 const DiagnosisForm = ({ onClose, existing }) => {
   const dispatch = useDispatch();
 
-  //  Patients
+  // Patients
   const patients = useSelector((state) => state.patients?.items || []);
-  const patientsLoading = useSelector((state) => state.patients?.loading || false);
+  const patientsLoading = useSelector(
+    (state) => state.patients?.loading || false
+  );
 
-  //  Lab tests 
+  // Lab Tests
   const labResults = useSelector(labTestsSelectors.selectAll);
-  const labLoading = useSelector((state) => state.labTests?.loading === "pending");
+  const labLoading = useSelector(
+    (state) => state.labTests?.loading === "pending"
+  );
 
   // Local state
   const [formData, setFormData] = useState({
     patient: existing?.patient?._id || "",
-    diagnosis: existing?.diagnosisType || "",
+    diagnosisType: existing?.diagnosisType || "",
     notes: existing?.notes || "",
   });
 
-  //  Fetch patients on mount
+  // Fetch patients on mount
   useEffect(() => {
     dispatch(fetchPatients({ page: 1, limit: 50 }));
   }, [dispatch]);
 
-  //  Fetch lab tests when patient changes
+  // Fetch lab tests when patient changes
   useEffect(() => {
     if (formData.patient) {
       dispatch(fetchLabTestsByPatient(formData.patient));
@@ -43,23 +53,39 @@ const DiagnosisForm = ({ onClose, existing }) => {
     });
   };
 
-  // Handle submit
+  // Handle form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.patient || !formData.diagnosis) {
-      toast.error("Please select a patient and diagnosis type.");
+
+    if (!formData.patient || !formData.diagnosisType) {
+      toast.error(
+        "Please select both a patient and a diagnosis type before saving."
+      );
       return;
     }
 
     try {
-      await dispatch(createDiagnosis(formData)).unwrap();
-      toast.success("Diagnosis saved successfully!");
-      setFormData({ patient: "", diagnosis: "", notes: "" });
+      if (existing) {
+        // Update mode
+        await dispatch(
+          updateDiagnosis({ id: existing._id, updates: formData })
+        ).unwrap();
+        toast.success("Diagnosis updated successfully!");
+      } else {
+        // Create mode
+        await dispatch(createDiagnosis(formData)).unwrap();
+        toast.success("Diagnosis created successfully!");
+        setFormData({ patient: "", diagnosisType: "", notes: "" });
+      }
+
       onClose();
     } catch (err) {
-      const errorMsg =
-        err?.message || err?.error || "Failed to save diagnosis.";
-      toast.error(errorMsg);
+      console.error("Diagnosis save failed:", err);
+      const backendMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Could not save diagnosis. Please review the form and try again.";
+      toast.error(backendMsg);
     }
   };
 
@@ -91,7 +117,7 @@ const DiagnosisForm = ({ onClose, existing }) => {
               required
               disabled={!!existing}
             >
-              <option value="">-- Select Patient --</option>
+              <option value="">Select Patient</option>
               {patientsLoading ? (
                 <option>Loading...</option>
               ) : (
@@ -131,18 +157,17 @@ const DiagnosisForm = ({ onClose, existing }) => {
           <div>
             <label className="block mb-1 font-medium">Diagnosis</label>
             <select
-              name="diagnosis"
-              value={formData.diagnosis}
+              name="diagnosisType"
+              value={formData.diagnosisType}
               onChange={handleChange}
               className="w-full border p-2 rounded"
               required
             >
               <option value="">Select Diagnosis</option>
               <option value="Pulmonary TB">Pulmonary TB</option>
-              <option value="Extrapulmonary TB">Extrapulmonary TB</option>
-              <option value="MDR-TB">MDR-TB</option>
-              <option value="XDR-TB">XDR-TB</option>
-              <option value="Latent TB">Latent TB</option>
+              <option value="Extra-pulmonary TB">Extra-pulmonary TB</option>
+              <option value="No TB">No TB</option>
+              <option value="Suspected TB">Suspected TB</option>
             </select>
           </div>
 
