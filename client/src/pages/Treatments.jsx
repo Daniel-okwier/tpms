@@ -10,8 +10,8 @@ import { toast } from "react-toastify";
 
 const TreatmentList = () => {
   const dispatch = useDispatch();
-  const { ids = [], entities = {}, loading, error } = useSelector(
-    (state) => state.treatments || {}
+  const { treatments = [], loading, error } = useSelector(
+    (state) => state.treatment || {}
   );
 
   const [search, setSearch] = useState("");
@@ -35,12 +35,13 @@ const TreatmentList = () => {
     }
   };
 
-  const treatments = ids.map((id) => entities[id]);
+  // 🔍 Filter by patient name or MRN
   const filteredTreatments = treatments.filter((t) => {
+    const searchTerm = search.toLowerCase();
     const matchesSearch =
-      t?.patient?.firstName?.toLowerCase().includes(search.toLowerCase()) ||
-      t?.patient?.lastName?.toLowerCase().includes(search.toLowerCase()) ||
-      t?.regimen?.toLowerCase().includes(search.toLowerCase());
+      t?.patient?.firstName?.toLowerCase().includes(searchTerm) ||
+      t?.patient?.lastName?.toLowerCase().includes(searchTerm) ||
+      t?.patient?.mrn?.toLowerCase().includes(searchTerm);
     const matchesStatus = !statusFilter || t.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -53,7 +54,7 @@ const TreatmentList = () => {
         <div className="flex gap-2 items-center">
           <input
             type="text"
-            placeholder="Search by patient or regimen..."
+            placeholder="Search by name or MRN..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="px-3 py-2 border rounded-md text-black"
@@ -88,6 +89,7 @@ const TreatmentList = () => {
           <thead>
             <tr className="bg-gray-100 text-gray-700">
               <th className="border px-2 py-2 text-left">Patient</th>
+              <th className="border px-2 py-2 text-left">MRN</th>
               <th className="border px-2 py-2 text-left">Regimen</th>
               <th className="border px-2 py-2 text-left">Start Date</th>
               <th className="border px-2 py-2 text-left">Expected End</th>
@@ -96,23 +98,23 @@ const TreatmentList = () => {
             </tr>
           </thead>
           <tbody>
-            {loading === "pending" && (
+            {loading && (
               <tr>
-                <td colSpan="6" className="text-center py-4">
+                <td colSpan="7" className="text-center py-4">
                   Loading...
                 </td>
               </tr>
             )}
             {error && (
               <tr>
-                <td colSpan="6" className="text-center text-red-500 py-4">
+                <td colSpan="7" className="text-center text-red-500 py-4">
                   {error || "Failed to load treatments"}
                 </td>
               </tr>
             )}
-            {loading !== "pending" && !error && filteredTreatments.length === 0 && (
+            {!loading && !error && filteredTreatments.length === 0 && (
               <tr>
-                <td colSpan="6" className="text-center py-4">
+                <td colSpan="7" className="text-center py-4">
                   No treatments found
                 </td>
               </tr>
@@ -126,12 +128,17 @@ const TreatmentList = () => {
                       ? `${t.patient.firstName} ${t.patient.lastName}`
                       : "N/A"}
                   </td>
-                  <td className="px-4 py-2">{t?.regimen}</td>
+                  <td className="px-4 py-2">{t?.patient?.mrn || "N/A"}</td>
+                  <td className="px-4 py-2">{t?.regimen || "N/A"}</td>
                   <td className="px-4 py-2">
-                    {new Date(t.startDate).toLocaleDateString()}
+                    {t.startDate
+                      ? new Date(t.startDate).toLocaleDateString()
+                      : "N/A"}
                   </td>
                   <td className="px-4 py-2">
-                    {new Date(t.expectedEndDate).toLocaleDateString()}
+                    {t.expectedEndDate
+                      ? new Date(t.expectedEndDate).toLocaleDateString()
+                      : "N/A"}
                   </td>
                   <td className="px-4 py-2 capitalize">{t.status}</td>
                   <td className="px-4 py-2 flex gap-2 justify-center">
