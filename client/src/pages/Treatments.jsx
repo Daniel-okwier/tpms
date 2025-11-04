@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchTreatments,
-  deleteTreatment,
+  archiveTreatment,
 } from "../redux/slices/treatmentSlice";
 import TreatmentForm from "./TreatmentForm";
 import TreatmentDetail from "./TreatmentDetail";
@@ -10,8 +10,8 @@ import { toast } from "react-toastify";
 
 const TreatmentList = () => {
   const dispatch = useDispatch();
-  const { treatments = [], loading, error } = useSelector(
-    (state) => state.treatment || {}
+  const { ids = [], entities = {}, loading, error } = useSelector(
+    (state) => state.treatments || {}
   );
 
   const [search, setSearch] = useState("");
@@ -24,11 +24,10 @@ const TreatmentList = () => {
     dispatch(fetchTreatments());
   }, [dispatch]);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to archive this treatment?"))
-      return;
+  const handleArchive = async (id) => {
+    if (!window.confirm("Are you sure you want to archive this treatment?")) return;
     try {
-      await dispatch(deleteTreatment(id)).unwrap();
+      await dispatch(archiveTreatment(id)).unwrap();
       toast.success("Treatment archived successfully");
       dispatch(fetchTreatments());
     } catch (err) {
@@ -36,11 +35,12 @@ const TreatmentList = () => {
     }
   };
 
+  const treatments = ids.map((id) => entities[id]);
   const filteredTreatments = treatments.filter((t) => {
     const matchesSearch =
-      t.patient?.firstName?.toLowerCase().includes(search.toLowerCase()) ||
-      t.patient?.lastName?.toLowerCase().includes(search.toLowerCase()) ||
-      t.regimen?.toLowerCase().includes(search.toLowerCase());
+      t?.patient?.firstName?.toLowerCase().includes(search.toLowerCase()) ||
+      t?.patient?.lastName?.toLowerCase().includes(search.toLowerCase()) ||
+      t?.regimen?.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = !statusFilter || t.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -96,7 +96,7 @@ const TreatmentList = () => {
             </tr>
           </thead>
           <tbody>
-            {loading && (
+            {loading === "pending" && (
               <tr>
                 <td colSpan="6" className="text-center py-4">
                   Loading...
@@ -105,15 +105,12 @@ const TreatmentList = () => {
             )}
             {error && (
               <tr>
-                <td
-                  colSpan="6"
-                  className="text-center text-red-500 py-4"
-                >
-                  {error || "Failed to load"}
+                <td colSpan="6" className="text-center text-red-500 py-4">
+                  {error || "Failed to load treatments"}
                 </td>
               </tr>
             )}
-            {!loading && !error && filteredTreatments.length === 0 && (
+            {loading !== "pending" && !error && filteredTreatments.length === 0 && (
               <tr>
                 <td colSpan="6" className="text-center py-4">
                   No treatments found
@@ -125,11 +122,11 @@ const TreatmentList = () => {
               filteredTreatments.map((t) => (
                 <tr key={t._id} className="border-b hover:bg-gray-50">
                   <td className="px-4 py-2">
-                    {t.patient
+                    {t?.patient
                       ? `${t.patient.firstName} ${t.patient.lastName}`
                       : "N/A"}
                   </td>
-                  <td className="px-4 py-2">{t.regimen}</td>
+                  <td className="px-4 py-2">{t?.regimen}</td>
                   <td className="px-4 py-2">
                     {new Date(t.startDate).toLocaleDateString()}
                   </td>
@@ -148,7 +145,7 @@ const TreatmentList = () => {
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDelete(t._id)}
+                      onClick={() => handleArchive(t._id)}
                       className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600 shadow"
                     >
                       Archive

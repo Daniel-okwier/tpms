@@ -22,9 +22,18 @@ const TreatmentForm = ({ existing, onClose }) => {
     status: "ongoing",
   });
 
+  const defaultRegimens = [
+    "2HRZE/4HR (Standard 6-month regimen)",
+    "6HE (Continuation phase)",
+    "MDR-TB Intensive Phase (Kanamycin, Levofloxacin, etc.)",
+    "XDR-TB Regimen",
+    "Custom...",
+  ];
+
   useEffect(() => {
     dispatch(fetchPatients());
     dispatch(fetchDiagnoses());
+
     if (existing) {
       setFormData({
         patient: existing.patient?._id || "",
@@ -49,7 +58,9 @@ const TreatmentForm = ({ existing, onClose }) => {
     e.preventDefault();
     try {
       if (existing) {
-        await dispatch(updateTreatment({ id: existing._id, data: formData })).unwrap();
+        await dispatch(
+          updateTreatment({ id: existing._id, data: formData })
+        ).unwrap();
         toast.success("Treatment updated successfully");
       } else {
         await dispatch(createTreatment(formData)).unwrap();
@@ -80,11 +91,15 @@ const TreatmentForm = ({ existing, onClose }) => {
               required
             >
               <option value="">Select Patient</option>
-              {patients.map((p) => (
-                <option key={p._id} value={p._id}>
-                  {p.firstName} {p.lastName} ({p.mrn})
-                </option>
-              ))}
+              {patients.length > 0 ? (
+                patients.map((p) => (
+                  <option key={p._id} value={p._id}>
+                    {p.firstName} {p.lastName} ({p.mrn})
+                  </option>
+                ))
+              ) : (
+                <option disabled>No patients found</option>
+              )}
             </select>
           </div>
 
@@ -102,7 +117,8 @@ const TreatmentForm = ({ existing, onClose }) => {
                 .filter((d) => d.patient?._id === formData.patient)
                 .map((d) => (
                   <option key={d._id} value={d._id}>
-                    {d.diagnosisType} - {new Date(d.diagnosisDate).toLocaleDateString()}
+                    {d.diagnosisType} -{" "}
+                    {new Date(d.diagnosisDate).toLocaleDateString()}
                   </option>
                 ))}
             </select>
@@ -111,15 +127,42 @@ const TreatmentForm = ({ existing, onClose }) => {
           {/* Regimen */}
           <div>
             <label className="block text-gray-700 font-medium mb-1">Regimen</label>
-            <input
-              type="text"
+            <select
               name="regimen"
-              value={formData.regimen}
-              onChange={handleChange}
-              placeholder="e.g. HRZE for 2 months, HR for 4 months"
-              className="w-full border px-3 py-2 rounded text-black"
-              required
-            />
+              value={
+                defaultRegimens.includes(formData.regimen)
+                  ? formData.regimen
+                  : "Custom..."
+              }
+              onChange={(e) => {
+                if (e.target.value === "Custom...") {
+                  setFormData({ ...formData, regimen: "" });
+                } else {
+                  handleChange(e);
+                }
+              }}
+              className="w-full border px-3 py-2 rounded text-black mb-2"
+            >
+              <option value="">Select Regimen</option>
+              {defaultRegimens.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+
+            {/* Show input when custom regimen */}
+            {!defaultRegimens.includes(formData.regimen) && (
+              <input
+                type="text"
+                name="regimen"
+                placeholder="Enter custom regimen"
+                value={formData.regimen}
+                onChange={handleChange}
+                className="w-full border px-3 py-2 rounded text-black"
+                required
+              />
+            )}
           </div>
 
           {/* Start & End Dates */}
@@ -136,7 +179,9 @@ const TreatmentForm = ({ existing, onClose }) => {
               />
             </div>
             <div>
-              <label className="block text-gray-700 font-medium mb-1">Expected End Date</label>
+              <label className="block text-gray-700 font-medium mb-1">
+                Expected End Date
+              </label>
               <input
                 type="date"
                 name="expectedEndDate"
