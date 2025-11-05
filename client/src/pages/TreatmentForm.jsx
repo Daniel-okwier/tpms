@@ -8,37 +8,43 @@ import { fetchPatients } from "../redux/slices/patientSlice";
 import { fetchDiagnoses } from "../redux/slices/diagnosisSlice";
 import { toast } from "react-toastify";
 
+const commonRegimens = [
+  "2HRZE/4HR",
+  "6HRZE",
+  "MDR-TB Regimen",
+  "HRZE (intensive)",
+  "HR (continuation)",
+];
+
 const TreatmentForm = ({ existing, onClose }) => {
   const dispatch = useDispatch();
-  const { patients = [] } = useSelector((state) => state.patient || {});
-  const { diagnoses = [] } = useSelector((state) => state.diagnosis || {});
+
+  // NOTE: use the patients slice shape (items)
+  const patients = useSelector((state) => state.patients?.items || []);
+  const patientsLoading = useSelector((state) => state.patients?.loading || false);
+
+  const diagnoses = useSelector((state) => state.diagnosis?.diagnoses || []);
 
   const [formData, setFormData] = useState({
     patient: "",
     diagnosis: "",
     regimen: "",
+    otherRegimen: "",
     startDate: "",
     expectedEndDate: "",
     status: "ongoing",
   });
 
-  const defaultRegimens = [
-    "2HRZE/4HR (Standard 6-month regimen)",
-    "6HE (Continuation phase)",
-    "MDR-TB Intensive Phase (Kanamycin, Levofloxacin, etc.)",
-    "XDR-TB Regimen",
-    "Custom...",
-  ];
-
   useEffect(() => {
-    dispatch(fetchPatients());
+    // pass an object so the patient thunk's parameter destructuring doesn't fail
+    dispatch(fetchPatients({ page: 1, limit: 50 }));
     dispatch(fetchDiagnoses());
-
     if (existing) {
       setFormData({
         patient: existing.patient?._id || "",
         diagnosis: existing.diagnosis?._id || "",
-        regimen: existing.regimen || "",
+        regimen: commonRegimens.includes(existing.regimen) ? existing.regimen : "Other",
+        otherRegimen: commonRegimens.includes(existing.regimen) ? "" : (existing.regimen || ""),
         startDate: existing.startDate
           ? new Date(existing.startDate).toISOString().split("T")[0]
           : "",
@@ -51,24 +57,56 @@ const TreatmentForm = ({ existing, onClose }) => {
   }, [dispatch, existing]);
 
   const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
+
+  const computeRegimenValue = () =>
+    formData.regimen === "Other" ? formData.otherRegimen.trim() : formData.regimen;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // basic validation
+    if (!formData.patient) {
+      toast.error("Please select a patient.");
+      return;
+    }
+    if (!computeRegimenValue()) {
+      toast.error("Please specify a regimen (select a common one or enter a custom one).");
+      return;
+    }
+    if (!formData.startDate) {
+      toast.error("Please select a start date.");
+      return;
+    }
+
+    const payload = {
+      patient: formData.patient,
+      diagnosis: formData.diagnosis || undefined,
+      regimen: computeRegimenValue(),
+      startDate: formData.startDate,
+      expectedEndDate: formData.expectedEndDate || undefined,
+      status: formData.status,
+    };
+
     try {
       if (existing) {
-        await dispatch(
-          updateTreatment({ id: existing._id, data: formData })
-        ).unwrap();
+        // thunk expects { id, updates }
+        await dispatch(updateTreatment({ id: existing._id, updates: payload })).unwrap();
         toast.success("Treatment updated successfully");
       } else {
-        await dispatch(createTreatment(formData)).unwrap();
+        await dispatch(createTreatment(payload)).unwrap();
         toast.success("Treatment created successfully");
       }
       onClose();
     } catch (err) {
-      toast.error(err?.message || "Failed to save treatment");
+      // improve error friendliness
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to save treatment. Please check the form and try again.";
+      toast.error(message);
     }
   };
 
@@ -91,14 +129,14 @@ const TreatmentForm = ({ existing, onClose }) => {
               required
             >
               <option value="">Select Patient</option>
-              {patients.length > 0 ? (
+              {patientsLoading ? (
+                <option>Loading...</option>
+              ) : (
                 patients.map((p) => (
                   <option key={p._id} value={p._id}>
                     {p.firstName} {p.lastName} ({p.mrn})
                   </option>
                 ))
-              ) : (
-                <option disabled>No patients found</option>
               )}
             </select>
           </div>
@@ -117,49 +155,40 @@ const TreatmentForm = ({ existing, onClose }) => {
                 .filter((d) => d.patient?._id === formData.patient)
                 .map((d) => (
                   <option key={d._id} value={d._id}>
-                    {d.diagnosisType} -{" "}
-                    {new Date(d.diagnosisDate).toLocaleDateString()}
+                    {d.diagnosisType} - {new Date(d.diagnosisDate).toLocaleDateString()}
                   </option>
                 ))}
             </select>
           </div>
 
-          {/* Regimen */}
+          {/* Regimen (select + other) */}
           <div>
             <label className="block text-gray-700 font-medium mb-1">Regimen</label>
-            <select
-              name="regimen"
-              value={
-                defaultRegimens.includes(formData.regimen)
-                  ? formData.regimen
-                  : "Custom..."
-              }
-              onChange={(e) => {
-                if (e.target.value === "Custom...") {
-                  setFormData({ ...formData, regimen: "" });
-                } else {
-                  handleChange(e);
-                }
-              }}
-              className="w-full border px-3 py-2 rounded text-black mb-2"
-            >
-              <option value="">Select Regimen</option>
-              {defaultRegimens.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-
-            {/* Show input when custom regimen */}
-            {!defaultRegimens.includes(formData.regimen) && (
-              <input
-                type="text"
+            <div className="flex gap-2">
+              <select
                 name="regimen"
-                placeholder="Enter custom regimen"
                 value={formData.regimen}
                 onChange={handleChange}
-                className="w-full border px-3 py-2 rounded text-black"
+                className="flex-1 border px-3 py-2 rounded text-black"
+                required
+              >
+                <option value="">Select or type</option>
+                {commonRegimens.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+                <option value="Other">Other (custom)</option>
+              </select>
+            </div>
+            {formData.regimen === "Other" && (
+              <input
+                type="text"
+                name="otherRegimen"
+                value={formData.otherRegimen}
+                onChange={handleChange}
+                placeholder="Enter custom regimen (e.g. custom description)"
+                className="w-full border mt-2 px-3 py-2 rounded text-black"
                 required
               />
             )}
@@ -179,16 +208,13 @@ const TreatmentForm = ({ existing, onClose }) => {
               />
             </div>
             <div>
-              <label className="block text-gray-700 font-medium mb-1">
-                Expected End Date
-              </label>
+              <label className="block text-gray-700 font-medium mb-1">Expected End Date</label>
               <input
                 type="date"
                 name="expectedEndDate"
                 value={formData.expectedEndDate}
                 onChange={handleChange}
                 className="w-full border px-3 py-2 rounded text-black"
-                required
               />
             </div>
           </div>
