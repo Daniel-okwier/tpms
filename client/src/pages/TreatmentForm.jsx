@@ -150,7 +150,7 @@ const TreatmentForm = ({ existing, onClose }) => {
               onChange={handleChange}
               className="w-full border px-3 py-2 rounded text-black"
             >
-              <option value="">Select Diagnosis (optional)</option>
+              <option value="">Select Diagnosis</option>
               {diagnoses
                 .filter((d) => d.patient?._id === formData.patient)
                 .map((d) => (

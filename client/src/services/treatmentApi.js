@@ -1,31 +1,28 @@
-
-import axios from "axios";
-
-const API_URL = "/api/treatments";
+import api from "@/utils/axios";
 
 const treatmentApi = {
-  // GET /api/treatments
-  getAll: (params = {}, config = {}) => axios.get(API_URL, { params, ...config }),
+  // GET /treatments
+  getAll: (params = {}, config = {}) => api.get("/treatments", { params, ...config }),
 
-  // GET /api/treatments/:id
-  getById: (id, config = {}) => axios.get(`${API_URL}/${id}`, config),
+  // GET /treatments/:id
+  getById: (id, config = {}) => api.get(`/treatments/${id}`, config),
 
-  // POST /api/treatments
-  create: (payload, config = {}) => axios.post(API_URL, payload, config),
+  // POST /treatments
+  create: (payload, config = {}) => api.post("/treatments", payload, config),
 
-  // PUT /api/treatments/:id
-  update: (id, updates, config = {}) => axios.put(`${API_URL}/${id}`, updates, config),
+  // PUT /treatments/:id
+  update: (id, updates, config = {}) => api.put(`/treatments/${id}`, updates, config),
 
-  // POST /api/treatments/:id/follow-up
+  // POST /treatments/:id/follow-up
   addFollowUp: (id, followUp, config = {}) =>
-    axios.post(`${API_URL}/${id}/follow-up`, followUp, config),
+    api.post(`/treatments/${id}/follow-up`, followUp, config),
 
-  // POST /api/treatments/:id/complete
+  // POST /treatments/:id/complete
   complete: (id, body = {}, config = {}) =>
-    axios.post(`${API_URL}/${id}/complete`, body, config),
+    api.post(`/treatments/${id}/complete`, body, config),
 
-  // DELETE /api/treatments/:id  (archive)
-  archive: (id, config = {}) => axios.delete(`${API_URL}/${id}`, config),
+  // DELETE /treatments/:id (archive)
+  archive: (id, config = {}) => api.delete(`/treatments/${id}`, config),
 };
 
 export default treatmentApi;
