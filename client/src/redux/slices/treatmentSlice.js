@@ -3,8 +3,9 @@ import treatmentApi from "../../services/treatmentApi";
 
 const adapter = createEntityAdapter({
   selectId: (t) => t._id,
-  sortComparer: (a, b) => new Date(b.startDate) - new Date(a.startDate),
+  sortComparer: (a, b) => new Date(b.start) - new Date(a.start),
 });
+
 
 const initialState = adapter.getInitialState({
   loading: "idle",
