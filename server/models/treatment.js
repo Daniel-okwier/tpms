@@ -11,13 +11,13 @@ const followUpSchema = new mongoose.Schema({
 
 const treatmentSchema = new mongoose.Schema({
   patient: { type: mongoose.Schema.Types.ObjectId, ref: 'Patient', required: true },
-  diagnosis: { type: mongoose.Schema.Types.ObjectId, ref: 'Diagnosis', required: true }, // link to diagnosis
+  diagnosis: { type: mongoose.Schema.Types.ObjectId, ref: 'Diagnosis', required: true }, 
   regimen: {
     type: String,
     required: true,
     enum: ['2HRZE/4HR', '6HRZE', 'MDR-TB Regimen', 'Other']
   },
-  weightKg: { type: Number }, // may influence dosing
+  weightKg: { type: Number }, 
   startDate: { type: Date, required: true },
   expectedEndDate: { type: Date, required: true },
   actualEndDate: { type: Date },
