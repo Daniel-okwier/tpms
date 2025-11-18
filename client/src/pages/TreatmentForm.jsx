@@ -19,10 +19,8 @@ const commonRegimens = [
 const TreatmentForm = ({ existing, onClose }) => {
   const dispatch = useDispatch();
 
-  // NOTE: use the patients slice shape (items)
   const patients = useSelector((state) => state.patients?.items || []);
   const patientsLoading = useSelector((state) => state.patients?.loading || false);
-
   const diagnoses = useSelector((state) => state.diagnosis?.diagnoses || []);
 
   const [formData, setFormData] = useState({
@@ -36,21 +34,17 @@ const TreatmentForm = ({ existing, onClose }) => {
   });
 
   useEffect(() => {
-    // pass an object so the patient thunk's parameter destructuring doesn't fail
     dispatch(fetchPatients({ page: 1, limit: 50 }));
     dispatch(fetchDiagnoses());
+    
     if (existing) {
       setFormData({
         patient: existing.patient?._id || "",
         diagnosis: existing.diagnosis?._id || "",
         regimen: commonRegimens.includes(existing.regimen) ? existing.regimen : "Other",
         otherRegimen: commonRegimens.includes(existing.regimen) ? "" : (existing.regimen || ""),
-        startDate: existing.startDate
-          ? new Date(existing.startDate).toISOString().split("T")[0]
-          : "",
-        expectedEndDate: existing.expectedEndDate
-          ? new Date(existing.expectedEndDate).toISOString().split("T")[0]
-          : "",
+        startDate: existing.startDate ? new Date(existing.startDate).toISOString().split("T")[0] : "",
+        expectedEndDate: existing.expectedEndDate ? new Date(existing.expectedEndDate).toISOString().split("T")[0] : "",
         status: existing.status || "ongoing",
       });
     }
@@ -61,13 +55,13 @@ const TreatmentForm = ({ existing, onClose }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const computeRegimenValue = () =>
+  const computeRegimenValue = () => 
     formData.regimen === "Other" ? formData.otherRegimen.trim() : formData.regimen;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // basic validation
+    // Basic validation
     if (!formData.patient) {
       toast.error("Please select a patient.");
       return;
@@ -92,7 +86,6 @@ const TreatmentForm = ({ existing, onClose }) => {
 
     try {
       if (existing) {
-        // thunk expects { id, updates }
         await dispatch(updateTreatment({ id: existing._id, updates: payload })).unwrap();
         toast.success("Treatment updated successfully");
       } else {
@@ -101,7 +94,6 @@ const TreatmentForm = ({ existing, onClose }) => {
       }
       onClose();
     } catch (err) {
-      // improve error friendliness
       const message =
         err?.response?.data?.message ||
         err?.message ||
