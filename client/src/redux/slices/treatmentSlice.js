@@ -2,6 +2,24 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import treatmentApi from "../../services/treatmentApi";
 
 /* ============================
+    HELPERS (Normalizers)
+============================ */
+const normalizeTreatment = (raw) => {
+  if (!raw) return null;
+
+  // Archive returns: { message, treatment: {...} }
+  if (raw.treatment) return raw.treatment;
+
+  // Update returns full treatment directly
+  if (raw._id) return raw;
+
+  // Create returns { data: {...} }
+  if (raw.data?._id) return raw.data;
+
+  return null;
+};
+
+/* ============================
     ASYNC THUNKS
 ============================ */
 
@@ -11,7 +29,7 @@ export const fetchTreatments = createAsyncThunk(
   async (_, thunkAPI) => {
     try {
       const res = await treatmentApi.getAll();
-      return res.data || []; // Ensure it returns the correct structure
+      return res.data || [];
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data?.message || err.message);
     }
@@ -24,7 +42,7 @@ export const fetchTreatmentById = createAsyncThunk(
   async (id, thunkAPI) => {
     try {
       const res = await treatmentApi.getById(id);
-      return res.data;
+      return normalizeTreatment(res.data);
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data?.message || err.message);
     }
@@ -37,7 +55,7 @@ export const createTreatment = createAsyncThunk(
   async (payload, thunkAPI) => {
     try {
       const res = await treatmentApi.create(payload);
-      return res.data.data;
+      return normalizeTreatment(res.data);
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data || err.message);
     }
@@ -50,7 +68,7 @@ export const updateTreatment = createAsyncThunk(
   async ({ id, updates }, thunkAPI) => {
     try {
       const res = await treatmentApi.update(id, updates);
-      return res.data.data;
+      return normalizeTreatment(res.data);
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data || err.message);
     }
@@ -63,7 +81,7 @@ export const archiveTreatment = createAsyncThunk(
   async (id, thunkAPI) => {
     try {
       const res = await treatmentApi.archive(id);
-      return res.data.data;
+      return normalizeTreatment(res.data);
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data?.message || err.message);
     }
@@ -73,7 +91,6 @@ export const archiveTreatment = createAsyncThunk(
 /* ============================
         SLICE
 ============================ */
-
 const treatmentSlice = createSlice({
   name: "treatments",
   initialState: {
@@ -98,7 +115,7 @@ const treatmentSlice = createSlice({
       })
       .addCase(fetchTreatments.fulfilled, (state, action) => {
         state.loading = false;
-        state.treatments = action.payload; // Make sure payload is the list
+        state.treatments = action.payload;
       })
       .addCase(fetchTreatments.rejected, (state, action) => {
         state.loading = false;
@@ -107,33 +124,42 @@ const treatmentSlice = createSlice({
 
       // Fetch one
       .addCase(fetchTreatmentById.fulfilled, (state, action) => {
-        state.selected = action.payload;
+        if (action.payload) {
+          state.selected = action.payload;
+        }
       })
 
       // Create
       .addCase(createTreatment.fulfilled, (state, action) => {
-        state.treatments.unshift(action.payload);
+        if (action.payload?._id) {
+          state.treatments.unshift(action.payload);
+        }
       })
 
       // Update
       .addCase(updateTreatment.fulfilled, (state, action) => {
-        const idx = state.treatments.findIndex(t => t._id === action.payload._id);
-        if (idx !== -1) state.treatments[idx] = action.payload;
+        const updated = action.payload;
+        if (!updated?._id) return;
+
+        const idx = state.treatments.findIndex(t => t._id === updated._id);
+        if (idx !== -1) {
+          state.treatments[idx] = updated;
+        }
       })
 
       // Archive
       .addCase(archiveTreatment.fulfilled, (state, action) => {
-        const idx = state.treatments.findIndex(t => t._id === action.payload._id);
+        const archived = action.payload;
+        if (!archived?._id) return;
+
+        const idx = state.treatments.findIndex(t => t._id === archived._id);
         if (idx !== -1) {
-          // Optionally remove from list or update status
-          state.treatments[idx].archived = true; 
+          state.treatments[idx] = archived;
         }
       });
   },
 });
 
-/* ============================
-    EXPORTS
-============================ */
+/* EXPORTS */
 export const { clearSelectedTreatment } = treatmentSlice.actions;
 export default treatmentSlice.reducer;
