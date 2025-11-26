@@ -1,30 +1,17 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import treatmentApi from "../../services/treatmentApi";
 
-/* ============================
-    HELPERS (Normalizers)
-============================ */
+// HELPERS (Normalizers)
 const normalizeTreatment = (raw) => {
   if (!raw) return null;
-
-  // Archive returns: { message, treatment: {...} }
   if (raw.treatment) return raw.treatment;
-
-  // Visit update returns { treatment: {...} }
   if (raw.updatedTreatment) return raw.updatedTreatment;
-
-  // General update returns full treatment
   if (raw._id) return raw;
-
-  // Create returns { data: {...} }
   if (raw.data?._id) return raw.data;
-
   return null;
 };
 
-/* ============================
-    ASYNC THUNKS — Visits
-============================ */
+// ASYNC THUNKS — VISITS
 
 // ADD NEW VISIT
 export const addVisit = createAsyncThunk(
@@ -35,7 +22,6 @@ export const addVisit = createAsyncThunk(
         visitDate,
         status,
       });
-
       return normalizeTreatment(res.data);
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data || err.message);
@@ -43,17 +29,12 @@ export const addVisit = createAsyncThunk(
   }
 );
 
-// UPDATE VISIT (edit)
+// UPDATE VISIT
 export const updateVisit = createAsyncThunk(
   "treatments/updateVisit",
   async ({ treatmentId, visitId, updates }, thunkAPI) => {
     try {
-      const res = await treatmentApi.updateVisit(
-        treatmentId,
-        visitId,
-        updates
-      );
-
+      const res = await treatmentApi.updateVisit(treatmentId, visitId, updates);
       return normalizeTreatment(res.data);
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data || err.message);
@@ -69,7 +50,6 @@ export const markVisitCompleted = createAsyncThunk(
       const res = await treatmentApi.updateVisit(treatmentId, visitId, {
         status: "completed",
       });
-
       return normalizeTreatment(res.data);
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data || err.message);
@@ -85,7 +65,6 @@ export const markVisitMissed = createAsyncThunk(
       const res = await treatmentApi.updateVisit(treatmentId, visitId, {
         status: "missed",
       });
-
       return normalizeTreatment(res.data);
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data || err.message);
@@ -93,10 +72,7 @@ export const markVisitMissed = createAsyncThunk(
   }
 );
 
-/* ============================
-    BASIC CRUD THUNKS
-============================ */
-
+// CRUD THUNKS
 export const fetchTreatments = createAsyncThunk(
   "treatments/fetchAll",
   async (_, thunkAPI) => {
@@ -104,9 +80,7 @@ export const fetchTreatments = createAsyncThunk(
       const res = await treatmentApi.getAll();
       return res.data || [];
     } catch (err) {
-      return thunkAPI.rejectWithValue(
-        err.response?.data?.message || err.message
-      );
+      return thunkAPI.rejectWithValue(err.response?.data?.message || err.message);
     }
   }
 );
@@ -118,9 +92,7 @@ export const fetchTreatmentById = createAsyncThunk(
       const res = await treatmentApi.getById(id);
       return normalizeTreatment(res.data);
     } catch (err) {
-      return thunkAPI.rejectWithValue(
-        err.response?.data?.message || err.message
-      );
+      return thunkAPI.rejectWithValue(err.response?.data?.message || err.message);
     }
   }
 );
@@ -132,9 +104,7 @@ export const createTreatment = createAsyncThunk(
       const res = await treatmentApi.create(payload);
       return normalizeTreatment(res.data);
     } catch (err) {
-      return thunkAPI.rejectWithValue(
-        err.response?.data || err.message
-      );
+      return thunkAPI.rejectWithValue(err.response?.data || err.message);
     }
   }
 );
@@ -146,9 +116,7 @@ export const updateTreatment = createAsyncThunk(
       const res = await treatmentApi.update(id, updates);
       return normalizeTreatment(res.data);
     } catch (err) {
-      return thunkAPI.rejectWithValue(
-        err.response?.data || err.message
-      );
+      return thunkAPI.rejectWithValue(err.response?.data || err.message);
     }
   }
 );
@@ -160,17 +128,12 @@ export const archiveTreatment = createAsyncThunk(
       const res = await treatmentApi.archive(id);
       return normalizeTreatment(res.data);
     } catch (err) {
-      return thunkAPI.rejectWithValue(
-        err.response?.data?.message || err.message
-      );
+      return thunkAPI.rejectWithValue(err.response?.data?.message || err.message);
     }
   }
 );
 
-/* ============================
-        SLICE
-============================ */
-
+// SLICE
 const treatmentSlice = createSlice({
   name: "treatments",
   initialState: {
@@ -201,50 +164,35 @@ const treatmentSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-
       /* --- FETCH ONE --- */
       .addCase(fetchTreatmentById.fulfilled, (state, action) => {
         if (action.payload) state.selected = action.payload;
       })
-
       /* --- CREATE --- */
       .addCase(createTreatment.fulfilled, (state, action) => {
-        if (action.payload?._id) {
-          state.treatments.unshift(action.payload);
-        }
+        if (action.payload?._id) state.treatments.unshift(action.payload);
       })
-
       /* --- UPDATE --- */
       .addCase(updateTreatment.fulfilled, (state, action) => {
         const updated = action.payload;
         if (!updated?._id) return;
 
         const idx = state.treatments.findIndex((t) => t._id === updated._id);
-        if (idx !== -1) {
-          state.treatments[idx] = updated;
-        }
+        if (idx !== -1) state.treatments[idx] = updated;
 
-        if (state.selected?._id === updated._id) {
-          state.selected = updated;
-        }
+        if (state.selected?._id === updated._id) state.selected = updated;
       })
-
       /* --- ARCHIVE --- */
       .addCase(archiveTreatment.fulfilled, (state, action) => {
-        const archived = action.payload;
-        if (!archived?._id) return;
+        const updated = action.payload;
+        if (!updated?._id) return;
 
-        const idx = state.treatments.findIndex((t) => t._id === archived._id);
-        if (idx !== -1) {
-          state.treatments[idx] = archived;
-        }
+        const idx = state.treatments.findIndex((t) => t._id === updated._id);
+        if (idx !== -1) state.treatments[idx] = updated;
 
-        if (state.selected?._id === archived._id) {
-          state.selected = archived;
-        }
+        if (state.selected?._id === updated._id) state.selected = updated;
       })
-
-      /* --- VISIT ACTIONS (shared handler) --- */
+      /* --- VISIT ACTIONS --- */
       .addCase(addVisit.fulfilled, updateTreatmentState)
       .addCase(updateVisit.fulfilled, updateTreatmentState)
       .addCase(markVisitCompleted.fulfilled, updateTreatmentState)
@@ -252,18 +200,13 @@ const treatmentSlice = createSlice({
   },
 });
 
-/* --------------------------
-    SHARED VISIT REDUCER
---------------------------- */
-
+// SHARED VISIT REDUCER
 function updateTreatmentState(state, action) {
   const updated = action.payload;
   if (!updated?._id) return;
 
   const idx = state.treatments.findIndex((t) => t._id === updated._id);
-  if (idx !== -1) {
-    state.treatments[idx] = updated;
-  }
+  if (idx !== -1) state.treatments[idx] = updated;
 
   if (state.selected?._id === updated._id) {
     state.selected = updated;
@@ -272,12 +215,5 @@ function updateTreatmentState(state, action) {
 
 /* EXPORTS */
 export const { clearSelectedTreatment } = treatmentSlice.actions;
-
-export {
-  addVisit,
-  updateVisit,
-  markVisitCompleted,
-  markVisitMissed,
-};
 
 export default treatmentSlice.reducer;
