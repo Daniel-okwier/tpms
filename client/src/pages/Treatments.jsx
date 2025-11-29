@@ -1,16 +1,18 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchTreatments, archiveTreatment, addFollowUp } from "../redux/slices/treatmentSlice"; 
+// Import treatmentSelectors
+import { fetchTreatments, archiveTreatment, addFollowUp, treatmentSelectors } from "../redux/slices/treatmentSlice"; 
 import TreatmentForm from "./TreatmentForm";
 import TreatmentDetail from "./TreatmentDetail";
 import TreatmentDashboard from "./TreatmentDashboard"; 
 import { toast } from "react-toastify";
 
-const selectTreatmentState = (state) => state.treatments;
-
 const TreatmentList = () => {
     const dispatch = useDispatch();
-    const { treatments = [], loading, error } = useSelector(selectTreatmentState) || {};
+    
+    // Get the full array using the selector and other state properties
+    const treatments = useSelector(treatmentSelectors.selectAll);
+    const { loading, error } = useSelector((state) => state.treatments) || {};
 
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
@@ -20,21 +22,25 @@ const TreatmentList = () => {
     const [showDashboard, setShowDashboard] = useState(true);
 
     useEffect(() => {
+        // Fetch the list on component mount
         dispatch(fetchTreatments());
     }, [dispatch]);
 
+    // Handle treatment archiving
     const handleArchive = async (id) => {
         if (!window.confirm("Are you sure you want to archive this treatment?")) return;
 
         try {
             await dispatch(archiveTreatment(id)).unwrap();
             toast.success("Treatment archived successfully");
+            // Refresh treatments after successful archive
             dispatch(fetchTreatments());
         } catch (err) {
             toast.error(err?.message || "Failed to archive treatment");
         }
     };
 
+    // Filter treatments based on search and status filter
     const filteredTreatments = useMemo(() => {
         const term = search.toLowerCase();
         return treatments.filter(t => {
@@ -47,18 +53,25 @@ const TreatmentList = () => {
         });
     }, [treatments, search, statusFilter]);
 
+    // Handle follow-up visit
     const handleAddOrUpdateVisit = async (dateIso, payload = {}) => {
         try {
             await dispatch(addFollowUp({
-                treatmentId: selected._id,
+                id: selected._id,
                 followUp: { date: dateIso, ...payload },
             })).unwrap();
-
             toast.success("Visit updated successfully");
-            dispatch(fetchTreatments());
+            // No need to re-fetch if upsertOne is sufficient
         } catch (err) {
             toast.error(err?.message || "Failed to update visit");
         }
+    };
+
+    // Handle form close
+    const handleCloseForm = () => {
+        setShowForm(false);
+        // Refresh the list if treatment was created/updated
+        dispatch(fetchTreatments()); 
     };
 
     return (
@@ -124,7 +137,7 @@ const TreatmentList = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {loading && (
+                                {loading === 'pending' && (
                                     <tr>
                                         <td colSpan="7" className="text-center py-4">Loading...</td>
                                     </tr>
@@ -134,12 +147,12 @@ const TreatmentList = () => {
                                         <td colSpan="7" className="text-center text-red-500 py-4">{error}</td>
                                     </tr>
                                 )}
-                                {!loading && !error && filteredTreatments.length === 0 && (
+                                {loading !== 'pending' && !error && filteredTreatments.length === 0 && (
                                     <tr>
                                         <td colSpan="7" className="text-center py-4">No treatments found</td>
                                     </tr>
                                 )}
-                                {!loading && !error && filteredTreatments.map((t) => (
+                                {loading !== 'pending' && !error && filteredTreatments.map((t) => (
                                     <tr key={t._id} className="border-b hover:bg-gray-50">
                                         <td className="px-4 py-2">{t?.patient ? `${t.patient.firstName} ${t.patient.lastName}` : "N/A"}</td>
                                         <td className="px-4 py-2">{t?.patient?.mrn || "N/A"}</td>
@@ -184,17 +197,18 @@ const TreatmentList = () => {
             {showForm && (
                 <TreatmentForm
                     existing={selected}
-                    onClose={() => {
-                        setShowForm(false);
-                        dispatch(fetchTreatments());
-                    }}
+                    onClose={handleCloseForm}
                 />
             )}
             {showDetail && selected && (
                 <TreatmentDetail
                     treatment={selected}
                     onClose={() => setShowDetail(false)}
-                    onAddOrUpdateVisit={handleAddOrUpdateVisit} 
+                    // FIX: Pass the single handler to the required prop names
+                    onMarkComplete={handleAddOrUpdateVisit}
+                    onMarkMissed={handleAddOrUpdateVisit}
+                    onEditVisit={handleAddOrUpdateVisit} 
+                    // Note: onAddOrUpdateVisit is now redundant here since we mapped it.
                 />
             )}
         </div>
