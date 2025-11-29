@@ -1,3 +1,5 @@
+// TreatmentDashboard.jsx
+
 import React from 'react';
 import { useSelector } from 'react-redux';
 import {
@@ -53,49 +55,59 @@ const COLORS = {
 const StatusDistributionChart = ({ data }) => (
     <div className="p-4 bg-white rounded-lg shadow-md h-96 flex flex-col items-center">
         <h3 className="text-xl font-semibold mb-3 text-gray-800">1. Treatment Status Distribution</h3>
-        <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-                <Pie
-                    data={data}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    dataKey="value"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                >
-                    {data.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[entry.name.toLowerCase()]} />
-                    ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-            </PieChart>
-        </ResponsiveContainer>
+        {data.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                    <Pie
+                        data={data}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        dataKey="value"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    >
+                        {data.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[entry.name.toLowerCase()]} />
+                        ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                </PieChart>
+            </ResponsiveContainer>
+        ) : (
+             <p className="text-gray-500 mt-20">No status data available to generate chart.</p>
+        )}
     </div>
 );
 
 const RegimenOutcomeChart = ({ data }) => (
     <div className="p-4 bg-white rounded-lg shadow-md h-96">
         <h3 className="text-xl font-semibold mb-3 text-gray-800">2. Outcome by Regimen Type</h3>
-        <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="completed" stackId="a" fill={COLORS.completed} name="Completed" />
-                <Bar dataKey="defaulted" stackId="a" fill={COLORS.defaulted} name="Defaulted" />
-                <Bar dataKey="failed" stackId="a" fill={COLORS.failed} name="Failed" />
-            </BarChart>
-        </ResponsiveContainer>
+         {data.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="completed" stackId="a" fill={COLORS.completed} name="Completed" />
+                    <Bar dataKey="defaulted" stackId="a" fill={COLORS.defaulted} name="Defaulted" />
+                    <Bar dataKey="failed" stackId="a" fill={COLORS.failed} name="Failed" />
+                </BarChart>
+            </ResponsiveContainer>
+         ) : (
+            <p className="text-gray-500 mt-20 text-center">No regimen outcome data available to generate chart.</p>
+         )}
     </div>
 );
 
 const TreatmentDashboard = () => {
-    const { treatments = [], loading } = useSelector(selectTreatmentState) || {};
+    // FIX: Destructure safely and ensure treatments is an array
+    const { entities, loading } = useSelector(selectTreatmentState) || {};
+    const treatments = Object.values(entities || {});
 
     const statusData = React.useMemo(() => prepareStatusData(treatments), [treatments]);
     const regimenOutcomeData = React.useMemo(() => prepareRegimenOutcomeData(treatments), [treatments]);
@@ -126,10 +138,14 @@ const TreatmentDashboard = () => {
         const today = new Date();
         const next30Days = new Date();
         next30Days.setDate(today.getDate() + 30);
-        return treatments.filter(t => new Date(t.expectedEndDate) <= next30Days && new Date(t.expectedEndDate) >= today).length;
+        return treatments.filter(t => t.expectedEndDate && new Date(t.expectedEndDate) <= next30Days && new Date(t.expectedEndDate) >= today).length;
     }, [treatments]);
 
-    if (loading) return <div className="text-center p-8 text-white">Loading Dashboard Data...</div>;
+    // Check loading state
+    if (loading === 'pending') return <div className="text-center p-8 text-white">Loading Dashboard Data...</div>;
+    
+    // Check for empty data after loading
+    if (treatments.length === 0) return <div className="text-center p-8 text-white text-xl">No treatment data available to display the dashboard.</div>;
 
     return (
         <div className="p-4">
@@ -166,6 +182,7 @@ const KPICard = ({ title, value, color, isHighlight = false }) => (
 // Upcoming Visits Table
 const UpcomingVisitsTable = ({ treatments }) => {
     const safeTreatments = Array.isArray(treatments) ? treatments : [];
+    
     return (
         <div className="p-4 bg-white rounded-lg shadow-md">
             <h3 className="text-xl font-semibold mb-3 text-gray-800">3. Visits Due (Next 7 Days) 🗓️</h3>
@@ -178,6 +195,7 @@ const UpcomingVisitsTable = ({ treatments }) => {
 // High-Risk Patients Table
 const HighRiskPatientsTable = ({ treatments }) => {
     const safeTreatments = Array.isArray(treatments) ? treatments : [];
+    // ... filtering logic for defaulted/failed treatments goes here ...
     return (
         <div className="p-4 bg-white rounded-lg shadow-md">
             <h3 className="text-xl font-semibold mb-3 text-gray-800">4. High Risk (Defaulted/Failed)</h3>
