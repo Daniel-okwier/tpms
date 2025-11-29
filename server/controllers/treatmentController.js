@@ -8,7 +8,6 @@ import {
   archiveTreatmentService
 } from "../services/treatmentService.js";
 
-
 // CREATE TREATMENT
 export const createTreatment = async (req, res) => {
   try {
@@ -29,12 +28,9 @@ export const createTreatment = async (req, res) => {
 
     res.status(201).json(result);
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: err.message || "Failed to create treatment" });
+    res.status(500).json({ message: err.message || "Failed to create treatment" });
   }
 };
-
 
 // GET ALL TREATMENTS
 export const getTreatments = async (req, res) => {
@@ -42,12 +38,9 @@ export const getTreatments = async (req, res) => {
     const treatments = await getTreatmentsService(req.user, req.query);
     res.json(treatments);
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: err.message || "Failed to fetch treatments" });
+    res.status(500).json({ message: err.message || "Failed to fetch treatments" });
   }
 };
-
 
 // GET TREATMENT BY ID
 export const getTreatmentById = async (req, res) => {
@@ -55,12 +48,9 @@ export const getTreatmentById = async (req, res) => {
     const treatment = await getTreatmentByIdService(req.params.id, req.user);
     res.json(treatment);
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: err.message || "Failed to fetch treatment" });
+    res.status(500).json({ message: err.message || "Failed to fetch treatment" });
   }
 };
-
 
 // UPDATE TREATMENT
 export const updateTreatment = async (req, res) => {
@@ -69,20 +59,12 @@ export const updateTreatment = async (req, res) => {
       return res.status(403).json({ message: "Not allowed" });
     }
 
-    const treatment = await updateTreatmentService(
-      req.params.id,
-      req.body,
-      req.user.role
-    );
-
+    const treatment = await updateTreatmentService(req.params.id, req.body, req.user.role);
     res.json(treatment);
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: err.message || "Failed to update treatment" });
+    res.status(500).json({ message: err.message || "Failed to update treatment" });
   }
 };
-
 
 // ADD FOLLOW-UP
 export const addFollowUp = async (req, res) => {
@@ -94,53 +76,37 @@ export const addFollowUp = async (req, res) => {
     };
 
     const treatment = await addFollowUpService(req.params.id, followUpData);
-
     res.json(treatment);
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: err.message || "Failed to add follow-up" });
+    console.error(err);
+    res.status(500).json({ message: err.message || "Failed to add follow-up" });
   }
 };
-
 
 // COMPLETE TREATMENT
 export const completeTreatment = async (req, res) => {
   try {
     if (!["doctor", "admin"].includes(req.user.role)) {
-      return res
-        .status(403)
-        .json({ message: "Only doctor/admin can complete treatment" });
+      return res.status(403).json({ message: "Only doctor/admin can complete treatment" });
     }
 
     const treatment = await completeTreatmentService(req.params.id);
-
     res.json(treatment);
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: err.message || "Failed to complete treatment" });
+    res.status(500).json({ message: err.message || "Failed to complete treatment" });
   }
 };
 
-
-
 // ARCHIVE TREATMENT
-
 export const archiveTreatment = async (req, res) => {
   try {
     if (req.user.role !== "admin") {
-      return res
-        .status(403)
-        .json({ message: "Only admin can archive treatments" });
+      return res.status(403).json({ message: "Only admin can archive treatments" });
     }
 
     const treatment = await archiveTreatmentService(req.params.id);
-
     res.json({ message: "Treatment archived", treatment });
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: err.message || "Failed to archive treatment" });
+    res.status(500).json({ message: err.message || "Failed to archive treatment" });
   }
 };

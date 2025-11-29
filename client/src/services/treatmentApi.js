@@ -14,7 +14,7 @@ const treatmentApi = {
   update: (id, updates, config = {}) => api.put(`/treatments/${id}`, updates, config),
 
   // POST /treatments/:id/follow-up
-  addFollowUp: (id, followUp, config = {}) =>
+  addFollowUp: (id, followUp, config = {}) => 
     api.post(`/treatments/${id}/follow-up`, followUp, config),
 
   // POST /treatments/:id/complete

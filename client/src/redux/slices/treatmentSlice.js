@@ -6,7 +6,6 @@ const adapter = createEntityAdapter({
   sortComparer: (a, b) => new Date(b.start) - new Date(a.start),
 });
 
-
 const initialState = adapter.getInitialState({
   loading: "idle",
   error: null,
@@ -18,7 +17,7 @@ const initialState = adapter.getInitialState({
   selected: null,
 });
 
-// Helper for auth header (mirror other slices)
+// Helper for auth header
 const getAuthHeaders = (getState) => {
   const state = getState();
   const token = state?.auth?.token || localStorage.getItem("token");
@@ -72,8 +71,7 @@ export const createTreatment = createAsyncThunk(
     try {
       const headers = getAuthHeaders(getState);
       const response = await treatmentApi.create(payload, { headers });
-      const data = response.data?.data?.treatment ?? response.data?.data ?? response.data;
-      return data;
+      return response.data?.data?.treatment ?? response.data?.data ?? response.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message || "Failed to create treatment");
     }
@@ -108,16 +106,29 @@ export const addFollowUp = createAsyncThunk(
   }
 );
 
-// Complete treatment
-export const completeTreatment = createAsyncThunk(
-  "treatments/complete",
-  async (id, { getState, rejectWithValue }) => {
+// Mark visits
+export const markVisitCompleted = createAsyncThunk(
+  "treatments/markVisitCompleted",
+  async ({ treatmentId, visitId }, thunkAPI) => {
     try {
-      const headers = getAuthHeaders(getState);
-      const response = await treatmentApi.complete(id, {}, { headers });
-      return response.data?.data || response.data;
+      const followUpData = { status: "completed", visitId: visitId };
+      const res = await treatmentApi.addFollowUp(treatmentId, followUpData);
+      return res.data;
     } catch (err) {
-      return rejectWithValue(err.response?.data || err.message || "Failed to complete treatment");
+      return thunkAPI.rejectWithValue(err.response?.data || err.message);
+    }
+  }
+);
+
+export const markVisitMissed = createAsyncThunk(
+  "treatments/markVisitMissed",
+  async ({ treatmentId, visitId }, thunkAPI) => {
+    try {
+      const followUpData = { status: "missed", visitId: visitId };
+      const res = await treatmentApi.addFollowUp(treatmentId, followUpData);
+      return res.data;
+    } catch (err) {
+      return thunkAPI.rejectWithValue(err.response?.data || err.message);
     }
   }
 );
@@ -160,7 +171,7 @@ const treatmentSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // fetch list
+      /* Fetch list */
       .addCase(fetchTreatments.pending, (state) => {
         state.loading = "pending";
         state.error = null;
@@ -176,7 +187,7 @@ const treatmentSlice = createSlice({
         state.error = action.payload;
       })
 
-      // fetch by id
+      /* Fetch by id */
       .addCase(fetchTreatmentById.pending, (state) => {
         state.loading = "pending";
         state.error = null;
@@ -191,15 +202,14 @@ const treatmentSlice = createSlice({
         state.error = action.payload;
       })
 
-      // create
+      /* Create */
       .addCase(createTreatment.pending, (state) => {
         state.loading = "pending";
         state.error = null;
-        state.successMessage = null;
       })
       .addCase(createTreatment.fulfilled, (state, action) => {
         state.loading = "succeeded";
-        const payload = action.payload?.treatment ?? action.payload;
+        const payload = action.payload;
         adapter.addOne(state, payload);
         state.successMessage = "Treatment created successfully.";
       })
@@ -208,7 +218,7 @@ const treatmentSlice = createSlice({
         state.error = action.payload;
       })
 
-      // update
+      /* Update */
       .addCase(updateTreatment.pending, (state) => {
         state.loading = "pending";
         state.error = null;
@@ -217,7 +227,6 @@ const treatmentSlice = createSlice({
         state.loading = "succeeded";
         adapter.upsertOne(state, action.payload);
         state.successMessage = "Treatment updated successfully.";
-        // keep selected in sync
         if (state.selected && state.selected._id === action.payload._id) {
           state.selected = action.payload;
         }
@@ -227,10 +236,9 @@ const treatmentSlice = createSlice({
         state.error = action.payload;
       })
 
-      // add follow-up
+      /* Add follow-up */
       .addCase(addFollowUp.pending, (state) => {
         state.loading = "pending";
-        state.error = null;
       })
       .addCase(addFollowUp.fulfilled, (state, action) => {
         state.loading = "succeeded";
@@ -245,34 +253,30 @@ const treatmentSlice = createSlice({
         state.error = action.payload;
       })
 
-      // complete treatment
-      .addCase(completeTreatment.pending, (state) => {
-        state.loading = "pending";
-        state.error = null;
+      /* Mark visit completed */
+      .addCase(markVisitCompleted.fulfilled, (state, action) => {
+        const updatedTreatment = action.payload;
+        if (updatedTreatment?._id) {
+          const index = state.ids.findIndex(id => id === updatedTreatment._id);
+          if (index !== -1) {
+            state.entities[updatedTreatment._id] = updatedTreatment;
+          }
+          if (state.selected?._id === updatedTreatment._id) {
+            state.selected = updatedTreatment;
+          }
+        }
       })
-      .addCase(completeTreatment.fulfilled, (state, action) => {
-        state.loading = "succeeded";
-        adapter.upsertOne(state, action.payload);
-        state.successMessage = "Treatment completed.";
-        if (state.selected && state.selected._id === action.payload._id) state.selected = action.payload;
-      })
-      .addCase(completeTreatment.rejected, (state, action) => {
-        state.loading = "failed";
-        state.error = action.payload;
-      })
-
-      // archive
+      
+      /* Archive */
       .addCase(archiveTreatment.pending, (state) => {
         state.loading = "pending";
-        state.error = null;
       })
       .addCase(archiveTreatment.fulfilled, (state, action) => {
-        state.loading = "succeeded";
-        // If backend returned updated treatment, upsert; otherwise remove by id if response was id
-        const payload = action.payload;
-        if (payload?._id) adapter.upsertOne(state, payload);
-        else if (typeof payload === "string") adapter.removeOne(state, payload);
-        state.successMessage = "Treatment archived.";
+        const archived = action.payload;
+        if (archived?._id) {
+          adapter.removeOne(state, archived._id);
+          state.successMessage = "Treatment archived.";
+        }
       })
       .addCase(archiveTreatment.rejected, (state, action) => {
         state.loading = "failed";

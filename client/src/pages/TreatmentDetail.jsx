@@ -1,129 +1,166 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
+import VisitList from "./VisitList";
+import VisitActionModal from "./VisitActionModal";
 
-const TreatmentDetail = ({ treatment, onClose }) => {
+const TreatmentDetail = ({
+  treatment,
+  onClose,
+  onMarkComplete,
+  onMarkMissed,
+  onEditVisit,
+}) => {
   if (!treatment) return null;
 
   const {
     patient,
-    diagnosis,
     regimen,
     startDate,
     expectedEndDate,
     actualEndDate,
     status,
     followUps = [],
+    visitSchedule = [],
     createdAt,
     createdBy,
   } = treatment;
 
+  // Group follow-ups by date
+  const followUpsByDate = useMemo(() => {
+    const map = {};
+    followUps.forEach((f) => {
+      if (!f || !f.date) return;
+      const key = new Date(f.date).toISOString().split("T")[0];
+      map[key] = map[key] || [];
+      map[key].push(f);
+    });
+    return map;
+  }, [followUps]);
+
+  // Modal state ONLY for EDIT VISIT
+  const [modal, setModal] = useState({
+    open: false,
+    date: null,
+    action: null,
+  });
+
+  const handleOpenEditModal = (dateIso) => {
+    setModal({ open: true, date: dateIso, action: "edit" });
+  };
+
+  const handleCloseModal = () =>
+    setModal({ open: false, date: null, action: null });
+
+  const handleSubmitModal = async (payload) => {
+    if (modal.action === "edit" && typeof onEditVisit === "function") {
+      await onEditVisit(modal.date, payload);
+    }
+    handleCloseModal();
+  };
+
+  const handleMarkComplete = async (dateIso) => { 
+    try {
+      await onMarkComplete(dateIso, { treatmentId: treatment._id });
+      // Show success toast here
+    } catch (error) {
+      console.error("Error marking visit completed:", error);
+      // Show error toast here
+    }
+  };
+
+  const handleMarkMissed = async (dateIso) => {
+    try {
+      await onMarkMissed(dateIso, { treatmentId: treatment._id });
+      // Show success toast here
+    } catch (error) {
+      console.error("Error marking visit missed:", error);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-      <div className="bg-white rounded-xl p-6 w-full max-w-3xl shadow-lg relative overflow-y-auto max-h-[90vh]">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">Treatment Details</h2>
+    <div className="fixed inset-0 z-50 p-4 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-lg p-6 overflow-y-auto max-h-[90vh]">
+        
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4">
+          <h2 className="text-2xl font-bold text-gray-900">Treatment Details</h2>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="text-gray-600 hover:text-gray-800"
+          >
+            ✕
+          </button>
+        </div>
 
-        {/* PATIENT INFO */}
-        <section className="border-b border-gray-200 pb-3 mb-4">
-          <h3 className="font-semibold text-gray-700 mb-2">Patient Information</h3>
-          <p>
-            <strong>Name:</strong> {patient?.firstName} {patient?.lastName}
-          </p>
-          <p>
-            <strong>MRN:</strong> {patient?.mrn}
-          </p>
-        </section>
-
-        {/* DIAGNOSIS */}
-        {diagnosis && (
-          <section className="border-b border-gray-200 pb-3 mb-4">
-            <h3 className="font-semibold text-gray-700 mb-2">Diagnosis</h3>
-            <p>
-              <strong>Type:</strong> {diagnosis.diagnosisType}
+        {/* Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">Patient</h3>
+            <p className="text-gray-900">
+              <span className="font-medium">Name:</span> {patient?.firstName} {patient?.lastName}
             </p>
-            <p>
-              <strong>Date:</strong>{" "}
-              {new Date(diagnosis.diagnosisDate).toLocaleDateString()}
+            <p className="text-gray-900">
+              <span className="font-medium">MRN:</span> {patient?.mrn || "N/A"}
             </p>
-          </section>
-        )}
+          </div>
 
-        {/* TREATMENT DETAILS */}
-        <section className="border-b border-gray-200 pb-3 mb-4">
-          <h3 className="font-semibold text-gray-700 mb-2">Treatment Information</h3>
-          <p>
-            <strong>Regimen:</strong> {regimen}
-          </p>
-          <p>
-            <strong>Start Date:</strong>{" "}
-            {new Date(startDate).toLocaleDateString()}
-          </p>
-          <p>
-            <strong>Expected End:</strong>{" "}
-            {new Date(expectedEndDate).toLocaleDateString()}
-          </p>
-          {actualEndDate && (
-            <p>
-              <strong>Actual End:</strong>{" "}
-              {new Date(actualEndDate).toLocaleDateString()}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">Treatment</h3>
+            <p className="text-gray-900">
+              <span className="font-medium">Regimen:</span> {regimen}
             </p>
-          )}
-          <p>
-            <strong>Status:</strong>{" "}
-            <span
-              className={`px-2 py-1 rounded text-sm ${
-                status === "completed"
-                  ? "bg-green-100 text-green-700"
-                  : status === "ongoing"
-                  ? "bg-yellow-100 text-yellow-700"
-                  : "bg-gray-100 text-gray-700"
-              }`}
-            >
-              {status}
-            </span>
-          </p>
-          <p>
-            <strong>Created By:</strong> {createdBy?.name || "N/A"} ({createdBy?.role})
-          </p>
-          <p>
-            <strong>Created At:</strong>{" "}
-            {new Date(createdAt).toLocaleDateString()}
-          </p>
-        </section>
+            <p className="text-gray-900">
+              <span className="font-medium">Start:</span> {startDate ? new Date(startDate).toLocaleDateString() : "N/A"}
+            </p>
+            <p className="text-gray-900">
+              <span className="font-medium">Expected End:</span> {expectedEndDate ? new Date(expectedEndDate).toLocaleDateString() : "N/A"}
+            </p>
+            {actualEndDate && (
+              <p className="text-gray-900">
+                <span className="font-medium">Actual End:</span> {new Date(actualEndDate).toLocaleDateString()}
+              </p>
+            )}
+            <p className="mt-2">
+              <span className="font-medium">Status:</span>{" "}
+              <span
+                className={`inline-block px-2 py-1 rounded text-sm ${
+                  status === "completed"
+                    ? "bg-green-100 text-green-800"
+                    : status === "ongoing"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : "bg-gray-100 text-gray-800"
+                }`}
+              >
+                {status}
+              </span>
+            </p>
+          </div>
+        </div>
 
-        {/* FOLLOW-UPS */}
-        <section>
-          <h3 className="font-semibold text-gray-700 mb-2">Follow-Up Visits</h3>
-          {followUps.length === 0 ? (
-            <p className="text-gray-500">No follow-up entries yet.</p>
-          ) : (
-            <table className="w-full border text-sm text-gray-800">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="border px-2 py-1 text-left">Date</th>
-                  <th className="border px-2 py-1 text-left">Weight (kg)</th>
-                  <th className="border px-2 py-1 text-left">Pill Count</th>
-                  <th className="border px-2 py-1 text-left">Side Effects</th>
-                  <th className="border px-2 py-1 text-left">Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {followUps.map((f, i) => (
-                  <tr key={i} className="hover:bg-gray-50">
-                    <td className="border px-2 py-1">
-                      {new Date(f.date).toLocaleDateString()}
-                    </td>
-                    <td className="border px-2 py-1">{f.weightKg || "-"}</td>
-                    <td className="border px-2 py-1">{f.pillCount || "-"}</td>
-                    <td className="border px-2 py-1">{f.sideEffects || "-"}</td>
-                    <td className="border px-2 py-1">{f.notes || "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
+        {/* Metadata */}
+        <div className="mb-6 text-sm text-gray-700">
+          <p>
+            <span className="font-medium">Created By:</span> {createdBy?.name || "N/A"} ({createdBy?.role || "N/A"})
+          </p>
+          <p>
+            <span className="font-medium">Created At:</span> {createdAt ? new Date(createdAt).toLocaleString() : "N/A"}
+          </p>
+        </div>
 
-        {/* CLOSE BUTTON */}
-        <div className="flex justify-end mt-5">
+        {/* Follow-up Visits */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-3">Follow-up Visits</h3>
+
+          <VisitList
+            visitSchedule={Array.isArray(visitSchedule) ? visitSchedule : []}
+            followUpsByDate={followUpsByDate}
+            onMarkComplete={handleMarkComplete} 
+            onMarkMissed={handleMarkMissed}     
+            onEditVisit={handleOpenEditModal}
+          />
+        </div>
+
+        <div className="flex justify-end mt-4">
           <button
             onClick={onClose}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -132,6 +169,15 @@ const TreatmentDetail = ({ treatment, onClose }) => {
           </button>
         </div>
       </div>
+
+      {/* EDIT VISIT MODAL ONLY */}
+      <VisitActionModal
+        open={modal.open}
+        date={modal.date}
+        action={modal.action}
+        onClose={handleCloseModal}
+        onSubmit={handleSubmitModal}
+      />
     </div>
   );
 };
