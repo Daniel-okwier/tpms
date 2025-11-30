@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-// Import treatmentSelectors
 import { fetchTreatments, archiveTreatment, addFollowUp, treatmentSelectors } from "../redux/slices/treatmentSlice"; 
 import TreatmentForm from "./TreatmentForm";
 import TreatmentDetail from "./TreatmentDetail";
@@ -10,7 +9,6 @@ import { toast } from "react-toastify";
 const TreatmentList = () => {
     const dispatch = useDispatch();
     
-    // Get the full array using the selector and other state properties
     const treatments = useSelector(treatmentSelectors.selectAll);
     const { loading, error } = useSelector((state) => state.treatments) || {};
 
@@ -22,25 +20,21 @@ const TreatmentList = () => {
     const [showDashboard, setShowDashboard] = useState(true);
 
     useEffect(() => {
-        // Fetch the list on component mount
         dispatch(fetchTreatments());
     }, [dispatch]);
 
-    // Handle treatment archiving
     const handleArchive = async (id) => {
         if (!window.confirm("Are you sure you want to archive this treatment?")) return;
 
         try {
             await dispatch(archiveTreatment(id)).unwrap();
             toast.success("Treatment archived successfully");
-            // Refresh treatments after successful archive
             dispatch(fetchTreatments());
         } catch (err) {
             toast.error(err?.message || "Failed to archive treatment");
         }
     };
 
-    // Filter treatments based on search and status filter
     const filteredTreatments = useMemo(() => {
         const term = search.toLowerCase();
         return treatments.filter(t => {
@@ -53,25 +47,19 @@ const TreatmentList = () => {
         });
     }, [treatments, search, statusFilter]);
 
-    // Handle follow-up visit
     const handleAddOrUpdateVisit = async (dateIso, payload = {}) => {
         try {
             await dispatch(addFollowUp({
                 id: selected._id,
                 followUp: { date: dateIso, ...payload },
             })).unwrap();
-            toast.success("Visit updated successfully");
-            // No need to re-fetch if upsertOne is sufficient
         } catch (err) {
-            toast.error(err?.message || "Failed to update visit");
+            throw err; 
         }
     };
 
-    // Handle form close
     const handleCloseForm = () => {
         setShowForm(false);
-        // Refresh the list if treatment was created/updated
-        dispatch(fetchTreatments()); 
     };
 
     return (
@@ -204,11 +192,9 @@ const TreatmentList = () => {
                 <TreatmentDetail
                     treatment={selected}
                     onClose={() => setShowDetail(false)}
-                    // FIX: Pass the single handler to the required prop names
                     onMarkComplete={handleAddOrUpdateVisit}
                     onMarkMissed={handleAddOrUpdateVisit}
                     onEditVisit={handleAddOrUpdateVisit} 
-                    // Note: onAddOrUpdateVisit is now redundant here since we mapped it.
                 />
             )}
         </div>
