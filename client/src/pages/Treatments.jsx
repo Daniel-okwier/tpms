@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchTreatments, archiveTreatment, addFollowUp, treatmentSelectors } from "../redux/slices/treatmentSlice"; 
+import { fetchTreatments, archiveTreatment, addFollowUp, fetchTreatmentById, treatmentSelectors } from "../redux/slices/treatmentSlice"; 
 import TreatmentForm from "./TreatmentForm";
 import TreatmentDetail from "./TreatmentDetail";
 import TreatmentDashboard from "./TreatmentDashboard"; 
@@ -8,17 +8,16 @@ import { toast } from "react-toastify";
 
 const TreatmentList = () => {
     const dispatch = useDispatch();
-    
     const treatments = useSelector(treatmentSelectors.selectAll);
     const { loading, error } = useSelector((state) => state.treatments) || {};
-
+    
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [showForm, setShowForm] = useState(false);
     const [selected, setSelected] = useState(null);
     const [showDetail, setShowDetail] = useState(false);
     const [showDashboard, setShowDashboard] = useState(true);
-
+    
     useEffect(() => {
         dispatch(fetchTreatments());
     }, [dispatch]);
@@ -37,37 +36,33 @@ const TreatmentList = () => {
 
     const filteredTreatments = useMemo(() => {
         const term = search.toLowerCase();
-        return treatments.filter(t => {
-            const matchesSearch =
-                t?.patient?.firstName?.toLowerCase().includes(term) ||
-                t?.patient?.lastName?.toLowerCase().includes(term) ||
-                t?.patient?.mrn?.toLowerCase().includes(term);
-            const matchesStatus = !statusFilter || t.status === statusFilter;
-            return matchesSearch && matchesStatus;
-        });
+        return treatments.filter(t => (
+            (t?.patient?.firstName?.toLowerCase().includes(term) ||
+            t?.patient?.lastName?.toLowerCase().includes(term) ||
+            t?.patient?.mrn?.toLowerCase().includes(term)) &&
+            (!statusFilter || t.status === statusFilter)
+        ));
     }, [treatments, search, statusFilter]);
 
     const handleAddOrUpdateVisit = async (dateIso, payload = {}) => {
+        if (!selected?._id) return;
+
         try {
-            await dispatch(addFollowUp({
-                id: selected._id,
-                followUp: { date: dateIso, ...payload },
-            })).unwrap();
+            await dispatch(addFollowUp({ id: selected._id, followUp: { date: dateIso, ...payload } })).unwrap();
+            const updatedTreatment = await dispatch(fetchTreatmentById(selected._id)).unwrap();
+            setSelected(updatedTreatment);
+            dispatch(fetchTreatments());
         } catch (err) {
-            throw err; 
+            toast.error(err?.message || "Failed to update treatment");
         }
     };
 
-    const handleCloseForm = () => {
-        setShowForm(false);
-    };
+    const handleCloseForm = () => setShowForm(false);
 
     return (
         <div className="p-4">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2">
-                <h1 className="text-3xl font-bold text-white">
-                    {showDashboard ? "Treatment Program Dashboard" : "Treatment List"}
-                </h1>
+                <h1 className="text-3xl font-bold text-white">{showDashboard ? "Treatment Program Dashboard" : "Treatment List"}</h1>
                 <button 
                     onClick={() => setShowDashboard(!showDashboard)}
                     className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 shadow"
@@ -183,10 +178,7 @@ const TreatmentList = () => {
             )}
 
             {showForm && (
-                <TreatmentForm
-                    existing={selected}
-                    onClose={handleCloseForm}
-                />
+                <TreatmentForm existing={selected} onClose={handleCloseForm} />
             )}
             {showDetail && selected && (
                 <TreatmentDetail
@@ -194,7 +186,7 @@ const TreatmentList = () => {
                     onClose={() => setShowDetail(false)}
                     onMarkComplete={handleAddOrUpdateVisit}
                     onMarkMissed={handleAddOrUpdateVisit}
-                    onEditVisit={handleAddOrUpdateVisit} 
+                    onEditVisit={handleAddOrUpdateVisit}
                 />
             )}
         </div>
