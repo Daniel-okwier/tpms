@@ -3,7 +3,7 @@ import React, { useMemo } from "react";
 /**
  * Renders the list of scheduled visits and cross-references them with actual follow-ups.
  * @param {Date[]} visitSchedule - Array of scheduled Date objects/strings.
- * @param {Object} followUpsByDate - Map of actual follow-up data keyed by ISO date string (YYYY-MM-DD).
+ * @param {Object} followUpsByDate - Map of the LATEST actual follow-up object keyed by ISO date string (YYYY-MM-DD).
  * @param {function} onMarkComplete - Handler (dateIso: string) => void.
  * @param {function} onMarkMissed - Handler (dateIso: string) => void.
  * @param {function} onEditVisit - Handler (dateIso: string) => void.
@@ -17,21 +17,42 @@ const VisitList = ({
 }) => {
   // Ensure schedule dates are unique and correctly formatted for comparison
   const scheduledVisits = useMemo(() => {
-    const uniqueDates = [...new Set(visitSchedule.map(d =>
-      new Date(d).toISOString().split("T")[0] // Standardize to YYYY-MM-DD string
-    ))];
+    const uniqueDates = [...new Set(visitSchedule.map(d => new Date(d).toISOString().split("T")[0]))];
 
     return uniqueDates.map(dateStr => {
-      const followUp = followUpsByDate[dateStr];
+      // followUp is the LATEST object for this date (from TreatmentDetail fix)
+      const followUp = followUpsByDate[dateStr] || null;
+
       let status = 'Scheduled';
 
       if (followUp) {
-        // Check the status field provided by the server
-        status = followUp.status === 'missed' ? 'Missed' : 'Completed';
+        const storedStatus = followUp.status;
+        
+        if (storedStatus) {
+          // Capitalize the status (e.g., 'missed' -> 'Missed')
+          status = storedStatus.charAt(0).toUpperCase() + storedStatus.slice(1);
+        } else {
+          // Fallback if status field is missing but data exists
+          status = 'Completed'; 
+        }
+      
+        // Normalize status to the primary visual states ('Completed' or 'Missed')
+        const lowerStatus = status.toLowerCase();
+        if (lowerStatus.includes('missed')) {
+          status = 'Missed';
+        } else if (lowerStatus.includes('completed')) {
+          status = 'Completed';
+        } else {
+          // Treat any other custom status with data as completed for visual purposes
+          status = 'Completed';
+        }
+
       } else {
-        // If the date is in the past and no follow-up data exists, it's effectively Missed
         const date = new Date(dateStr);
-        if (date < new Date() && date.toDateString() !== new Date().toDateString()) {
+        const today = new Date().toISOString().split("T")[0]; 
+        
+        // Check for overdue/missed logic only if no follow-up was recorded
+        if (date < new Date() && dateStr !== today) {
           status = 'Overdue/Missed';
         }
       }
@@ -40,7 +61,7 @@ const VisitList = ({
         dateIso: dateStr,
         displayDate: new Date(dateStr).toLocaleDateString(),
         status,
-        followUp,
+        followUp, // This is the LATEST record for weight/notes
       };
     }).sort((a, b) => new Date(a.dateIso) - new Date(b.dateIso));
   }, [visitSchedule, followUpsByDate]);
@@ -79,15 +100,16 @@ const VisitList = ({
                   {visit.status}
                 </span>
               </td>
+              {/* Weight is now only displayed if it exists in the LATEST followUp record */}
               <td className="p-2">{visit.followUp?.weightKg || 'N/A'}</td>
               <td className="p-2 text-gray-600 max-w-xs truncate">{visit.followUp?.notes || 'N/A'}</td>
               <td className="p-2 space-x-2 text-center whitespace-nowrap">
-                {visit.status === 'Completed' ? (
+                {visit.status === 'Completed' || visit.status === 'Missed' || visit.status === 'Overdue/Missed' ? (
                   <button
                     onClick={() => onEditVisit(visit.dateIso)}
                     className="px-3 py-1 bg-yellow-500 text-white rounded text-xs hover:bg-yellow-600"
                   >
-                    Edit Data
+                    {visit.status === 'Completed' ? 'Edit Data' : 'View/Edit Note'}
                   </button>
                 ) : (
                   <>
