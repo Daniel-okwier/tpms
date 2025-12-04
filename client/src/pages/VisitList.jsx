@@ -15,43 +15,28 @@ const VisitList = ({
   onMarkMissed,
   onEditVisit,
 }) => {
-  // Ensure schedule dates are unique and correctly formatted for comparison
   const scheduledVisits = useMemo(() => {
     const uniqueDates = [...new Set(visitSchedule.map(d => new Date(d).toISOString().split("T")[0]))];
 
     return uniqueDates.map(dateStr => {
-      // followUp is the LATEST object for this date (from TreatmentDetail fix)
       const followUp = followUpsByDate[dateStr] || null;
-
       let status = 'Scheduled';
 
       if (followUp) {
         const storedStatus = followUp.status;
-        
-        if (storedStatus) {
-          // Capitalize the status (e.g., 'missed' -> 'Missed')
-          status = storedStatus.charAt(0).toUpperCase() + storedStatus.slice(1);
-        } else {
-          // Fallback if status field is missing but data exists
-          status = 'Completed'; 
-        }
-      
-        // Normalize status to the primary visual states ('Completed' or 'Missed')
+        // Capitalize the status
+        status = storedStatus ? storedStatus.charAt(0).toUpperCase() + storedStatus.slice(1) : 'Completed';
+
         const lowerStatus = status.toLowerCase();
         if (lowerStatus.includes('missed')) {
           status = 'Missed';
         } else if (lowerStatus.includes('completed')) {
           status = 'Completed';
-        } else {
-          // Treat any other custom status with data as completed for visual purposes
-          status = 'Completed';
         }
-
       } else {
         const date = new Date(dateStr);
-        const today = new Date().toISOString().split("T")[0]; 
-        
-        // Check for overdue/missed logic only if no follow-up was recorded
+        const today = new Date().toISOString().split("T")[0];
+
         if (date < new Date() && dateStr !== today) {
           status = 'Overdue/Missed';
         }
@@ -61,7 +46,7 @@ const VisitList = ({
         dateIso: dateStr,
         displayDate: new Date(dateStr).toLocaleDateString(),
         status,
-        followUp, // This is the LATEST record for weight/notes
+        followUp, 
       };
     }).sort((a, b) => new Date(a.dateIso) - new Date(b.dateIso));
   }, [visitSchedule, followUpsByDate]);
@@ -94,14 +79,15 @@ const VisitList = ({
         <tbody>
           {scheduledVisits.map((visit) => (
             <tr key={visit.dateIso} className="border-b hover:bg-gray-50">
-              <td className="p-2 font-medium">{visit.displayDate}</td>
+              {/* Enhance Date Visibility */}
+              <td className="p-2 font-semibold text-gray-800">{visit.displayDate}</td>
               <td className="p-2">
                 <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getStatusColor(visit.status)}`}>
                   {visit.status}
                 </span>
               </td>
-              {/* Weight is now only displayed if it exists in the LATEST followUp record */}
-              <td className="p-2">{visit.followUp?.weightKg || 'N/A'}</td>
+              {/* Darker Weight display */}
+              <td className="p-2 font-semibold text-gray-800">{visit.followUp?.weightKg || 'N/A'}</td>
               <td className="p-2 text-gray-600 max-w-xs truncate">{visit.followUp?.notes || 'N/A'}</td>
               <td className="p-2 space-x-2 text-center whitespace-nowrap">
                 {visit.status === 'Completed' || visit.status === 'Missed' || visit.status === 'Overdue/Missed' ? (
