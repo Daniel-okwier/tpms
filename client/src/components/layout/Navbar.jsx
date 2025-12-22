@@ -9,19 +9,14 @@ export default function Navbar() {
   const { user } = useSelector((state) => state.auth);
 
   const handleLogout = () => {
-    // Clear auth state
     dispatch(setCredentials(null));
-
-    // Remove from localStorage (if stored there)
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-
-    // Redirect to login
     navigate("/login");
   };
 
   return (
-    <nav className="bg-blue-800 text-white px-6 py-3 flex justify-between items-center shadow-md">
+    <nav className="bg-blue-900 text-white px-6 py-3 flex justify-between items-center shadow-md">
       <div className="text-lg font-bold">
         <Link to="/dashboard">TPMS</Link>
       </div>
@@ -42,7 +37,7 @@ export default function Navbar() {
             </span>
             <button
               onClick={handleLogout}
-              className="bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md text-sm"
+              className="bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md text-sm transition-colors"
             >
               Logout
             </button>
@@ -50,7 +45,7 @@ export default function Navbar() {
         ) : (
           <Link
             to="/login"
-            className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-md text-sm"
+            className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-md text-sm transition-colors"
           >
             Login
           </Link>
