@@ -3,9 +3,9 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { 
   Plus, Search, UserRoundPen, Archive, Eye, 
-  CheckCircle, AlertCircle, RotateCcw, Building2, Users, Activity, Clock
+  CheckCircle, AlertCircle, Building2, Users, Activity, Clock
 } from "lucide-react"; 
-import { fetchPatients, archivePatient, searchPatients, updatePatient, createPatient } from "@/redux/slices/patientSlice";
+import { fetchPatients, archivePatient, updatePatient, createPatient } from "@/redux/slices/patientSlice";
 import PatientForm from "./PatientForm";
 
 export default function Patients() {
@@ -18,35 +18,24 @@ export default function Patients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
 
-  // Initial load
   useEffect(() => {
     dispatch(fetchPatients());
   }, [dispatch]);
+
+  // --- 🔍 CLIENT-SIDE FILTERING LOGIC (Same as your DiagnosisPage) ---
+  const filteredPatients = items.filter((p) => {
+    const fullName = `${p.firstName || ""} ${p.lastName || ""}`.toLowerCase();
+    const mrn = p.mrn?.toLowerCase() || "";
+    const facility = p.facilityName?.toLowerCase() || "";
+    const query = searchTerm.toLowerCase();
+
+    return fullName.includes(query) || mrn.includes(query) || facility.includes(query);
+  });
 
   const stats = {
     total: items.length,
     suspected: items.filter(p => p.initialStatus === 'suspected_tb').length,
     confirmed: items.filter(p => p.initialStatus === 'confirmed_tb').length
-  };
-
-  // --- IMPROVED LIVE SEARCH LOGIC ---
-  const onSearchInputChange = (e) => {
-    const val = e.target.value;
-    setSearchTerm(val);
-    
-    // If input is cleared, show all patients immediately
-    if (val.trim() === "") {
-      dispatch(fetchPatients());
-    } else {
-      // Search happens on every keystroke for partial matches
-      dispatch(searchPatients({ query: val }));
-    }
-  };
-
-  const handleManualSearch = () => {
-    if (searchTerm.trim() !== "") {
-      dispatch(searchPatients({ query: searchTerm }));
-    }
   };
 
   const showToast = (message, type = "success") => {
@@ -73,6 +62,7 @@ export default function Patients() {
 
   return (
     <div className="p-6 space-y-8 max-w-7xl mx-auto relative min-h-screen">
+      {/* Toast Notification */}
       {toast.show && (
         <div className={`fixed top-10 right-10 z-[120] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl border ${
           toast.type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-red-50 border-red-200 text-red-800"
@@ -96,7 +86,7 @@ export default function Patients() {
         </button>
       </div>
 
-      {/* Stats Cards */}
+      {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5">
           <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-bold"><Users size={28} /></div>
@@ -112,23 +102,22 @@ export default function Patients() {
         </div>
       </div>
 
-      {/* Live Search Input */}
+      {/* Search Bar */}
       <div className="flex max-w-md bg-white border border-slate-200 rounded-xl shadow-sm focus-within:ring-4 focus-within:ring-blue-50 overflow-hidden">
-        <input 
-          placeholder="Type name or MRN to search..."
-          className="flex-1 pl-4 py-2.5 outline-none text-slate-600"
-          value={searchTerm}
-          onChange={onSearchInputChange}
-          onKeyPress={(e) => e.key === 'Enter' && handleManualSearch()}
-        />
-        <button onClick={handleManualSearch} className="bg-slate-50 border-l border-slate-200 px-4 text-slate-400 hover:text-blue-600 transition-colors">
+        <div className="pl-4 flex items-center text-slate-400">
           <Search size={20} />
-        </button>
+        </div>
+        <input 
+          placeholder="Search Name, MRN, or Facility..."
+          className="flex-1 pl-3 py-2.5 outline-none text-slate-600"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
 
-      {/* Table & Empty State Logic */}
+      {/* Table & Results */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[300px]">
-        {items.length > 0 ? (
+        {filteredPatients.length > 0 ? (
           <table className="w-full text-left">
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
@@ -139,7 +128,7 @@ export default function Patients() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {items.map((p) => (
+              {filteredPatients.map((p) => (
                 <tr key={p._id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="font-bold text-slate-800 capitalize">{p.firstName} {p.lastName}</div>
@@ -170,20 +159,13 @@ export default function Patients() {
             </tbody>
           </table>
         ) : (
-          /* THIS SHOWS IMMEDIATELY IF ITEMS ARRAY IS EMPTY */
+          /* Empty State when filteredPatients has 0 results */
           <div className="py-24 text-center flex flex-col items-center justify-center">
              <div className="bg-slate-50 p-6 rounded-full mb-4 text-slate-200"><Search size={48}/></div>
              <p className="text-slate-500 text-lg font-bold">Patient Not Found</p>
-             <p className="text-slate-400 text-sm mt-1 max-w-xs mx-auto">
-               We couldn't find any records matching <span className="text-blue-600 font-bold">"{searchTerm}"</span>. 
-               Please check the spelling or MRN.
+             <p className="text-slate-400 text-sm mt-1 max-w-xs mx-auto text-center">
+               We couldn't find any records matching <span className="text-blue-600 font-bold">"{searchTerm}"</span>.
              </p>
-             <button 
-                onClick={() => { setSearchTerm(""); dispatch(fetchPatients()); }} 
-                className="mt-6 px-6 py-2 bg-blue-50 text-blue-600 font-bold text-sm rounded-xl flex items-center gap-2 hover:bg-blue-100 transition-all"
-             >
-                <RotateCcw size={16} /> Reset List & View All
-             </button>
           </div>
         )}
       </div>
