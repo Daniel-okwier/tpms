@@ -1,28 +1,31 @@
 import express from 'express';
-import {
-  createDiagnosis,
-  getDiagnoses,
-  getDiagnosisById,
-  updateDiagnosis,
-  deleteDiagnosis,
-} from '../controllers/diagnosisController.js';
-import { protect, authorizeRoles as authorize } from '../middleware/authMiddleware.js';
-
 const router = express.Router();
 
-// Create diagnosis (doctor/admin only)
-router.post('/', protect, authorize('doctor', 'admin','nurse'), createDiagnosis);
+import { 
+    getDiagnoses, 
+    getDiagnosisById, 
+    createDiagnosis, 
+    updateDiagnosis, 
+    deleteDiagnosis 
+} from '../controllers/diagnosisController.js'; 
 
-// Get all diagnoses (staff only)
-router.get('/', protect, authorize('nurse', 'doctor', 'admin'), getDiagnoses);
+import { protect, authorizeRoles as authorize } from '../middleware/authMiddleware.js';
 
-// Get a single diagnosis (staff only)
-router.get('/:id', protect, authorize('nurse', 'doctor', 'admin'), getDiagnosisById);
+// --- Endpoints mapped to Controller functions ---
 
-// Update diagnosis (doctor/admin only)
-router.put('/:id', protect, authorize('doctor', 'admin','nurse'), updateDiagnosis);
+// Get all diagnoses (accessible by any logged-in staff)
+router.get('/', protect, getDiagnoses);
 
-// Delete diagnosis (admin only)
-router.delete('/:id', protect, authorize('admin','nurse'), deleteDiagnosis);
+// Create a diagnosis (doctors/admins)
+router.post('/', protect, authorize('doctor', 'admin'), createDiagnosis);
+
+// Get single diagnosis by ID
+router.get('/:id', protect, getDiagnosisById);
+
+// Update diagnosis (doctors/admins)
+router.put('/:id', protect, authorize('doctor', 'admin'), updateDiagnosis);
+
+// Delete diagnosis (admins only)
+router.delete('/:id', protect, authorize('admin','doctor'), deleteDiagnosis);
 
 export default router;
