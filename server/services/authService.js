@@ -1,6 +1,6 @@
 
 import crypto from "crypto";
-import User from "../models/User.js";
+import User from "../models/user.js";
 import generateToken from "../utils/generateToken.js";
 
 // Register a new user
