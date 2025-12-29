@@ -9,10 +9,14 @@ By integrating multiple clinical departments into a single, high-performance pla
 
 
 📊 Visuals & Screenshots
-    ### Secure Authentication
+
+### Secure-Authentication
 ![Login Page](./screenshots/login.png)
 ### Dashboard
 ![Dashboard View](./screenshots/dash2.png)
+
+### PaientDashboard
+![PaientDashboard View](./screenshots/dash2.png)
 
 
 🚀 Key Features
