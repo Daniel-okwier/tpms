@@ -8,6 +8,7 @@ import {
   resetPasswordDirect,
   adminCreateUser,
   getAllUsers,
+  getUserById,
   updateUser,
   deleteUser,
 } from '../controllers/authController.js';
@@ -30,6 +31,7 @@ router.get('/profile', protect, getUserProfile);
 router.post('/create-user', protect, adminOnly, adminCreateUser);
 router.get('/users', protect, adminOnly, getAllUsers);
 router.put('/users/:id', protect, adminOnly, updateUser);
+router.get('/users/:id', protect, adminOnly, getUserById);
 router.delete('/users/:id', protect, adminOnly, deleteUser);
 
 export default router;
