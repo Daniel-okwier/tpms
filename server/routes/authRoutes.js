@@ -1,4 +1,3 @@
-// routes/authRoutes.js
 import express from 'express';
 import {
   registerUser,
@@ -16,18 +15,24 @@ import { protect, adminOnly } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Public
+// --- PUBLIC ROUTES ---
+
+// Server Wake-up / Health Check (Called by Login.jsx useEffect)
+router.get('/status', (req, res) => {
+  res.status(200).json({ status: "online", message: "Server is awake" });
+});
+
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 
 // Internal reset flow
-router.post('/forgot-password', requestPasswordReset);   // verify email exists
-router.post('/reset-password-direct', resetPasswordDirect); // reset with new password
+router.post('/forgot-password', requestPasswordReset);
+router.post('/reset-password-direct', resetPasswordDirect);
 
-// Protected
+// --- PROTECTED ROUTES ---
 router.get('/profile', protect, getUserProfile);
 
-// Admin only
+// --- ADMIN ONLY ROUTES ---
 router.post('/create-user', protect, adminOnly, adminCreateUser);
 router.get('/users', protect, adminOnly, getAllUsers);
 router.put('/users/:id', protect, adminOnly, updateUser);

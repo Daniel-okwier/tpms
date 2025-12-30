@@ -21,9 +21,21 @@ const drugSchema = new mongoose.Schema({
         type: Date, 
         required: true, 
     },
+
+    batchNumber: {
+        type: String,
+        required: true,      
+        unique: true,        
+    },
     price: {
         type: Number,
         required: false,
+    },
+    lowStockThreshold: { 
+        type: Number,
+        required: false, 
+        default: 50,     
+        min: 1,
     },
 }, { timestamps: true });
 

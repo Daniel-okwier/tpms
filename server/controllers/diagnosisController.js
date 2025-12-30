@@ -6,15 +6,23 @@ import {
   deleteDiagnosisService,
 } from '../services/diagnosisService.js';
 
-// Create a diagnosis (doctors/admins)
+// Create a diagnosis
 export const createDiagnosis = async (req, res) => {
   try {
+    // RBAC Check
     if (!['doctor', 'admin'].includes(req.user.role)) {
-      return res.status(403).json({ message: 'Access denied. Only doctors or admins can create diagnosis.' });
+      return res.status(403).json({ message: 'Access denied. Doctors/Admins only.' });
+    }
+
+    // Map incoming field 'patient' (from frontend) to 'patientId' (for service)
+    const patientId = req.body.patient || req.body.patientId;
+
+    if (!patientId) {
+      return res.status(400).json({ success: false, message: 'Patient selection is required' });
     }
 
     const diagnosis = await createDiagnosisService({
-      patientId: req.body.patient,
+      patientId: patientId,
       labTests: req.body.labTests || [],
       diagnosisType: req.body.diagnosisType,
       notes: req.body.notes,
@@ -23,7 +31,8 @@ export const createDiagnosis = async (req, res) => {
 
     res.status(201).json({ success: true, data: diagnosis });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message || 'Failed to create diagnosis' });
+    console.error("Diagnosis Create Error:", error);
+    res.status(500).json({ success: false, message: error.message || 'Server error during creation' });
   }
 };
 
@@ -61,16 +70,17 @@ export const updateDiagnosis = async (req, res) => {
   }
 };
 
-// Delete diagnosis (admins only)
+// Delete diagnosis
 export const deleteDiagnosis = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Only admins can delete diagnosis records' });
+    // FIX: Changed from 'admin only' to 'admin and doctor' to match your router
+    if (!['admin', 'doctor'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Access denied. Insufficient permissions.' });
     }
 
     const result = await deleteDiagnosisService(req.params.id);
     res.json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message || 'Failed to delete diagnosis' });
+    res.status(500).json({ success: false, message: error.message || 'Delete failed' });
   }
 };

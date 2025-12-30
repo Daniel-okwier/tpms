@@ -100,8 +100,8 @@ export const completeTreatment = async (req, res) => {
 // ARCHIVE TREATMENT
 export const archiveTreatment = async (req, res) => {
   try {
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ message: "Only admin can archive treatments" });
+    if (req.user.role !== "doctor") {
+      return res.status(403).json({ message: "Only doctors can archive treatments" });
     }
 
     const treatment = await archiveTreatmentService(req.params.id);

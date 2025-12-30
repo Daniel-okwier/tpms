@@ -1,23 +1,28 @@
 import mongoose from 'mongoose';
 
 const reportSchema = new mongoose.Schema({
-  reportType: { 
-    type: String, 
+  reportType: {
+    type: String,
     enum: [
-      'patientStats', 
-      'treatmentOutcomes', 
-      'labSummary', 
-      'appointmentMetrics', 
-      'trends', 
-      'fullDashboard'
+      
+      'patientStats',
+      'treatmentOutcomes',
+      'labSummary',
+      'trends',
+      'fullDashboard',
+      'treatmentSuccessRate',
+      'cohortAnalysis',
+      'relapseSummary',
+      'quarterlyNTPReport' 
     ],
     required: true
   },
   generatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   generatedAt: { type: Date, default: Date.now },
-  filters: { type: Object }, // e.g., date range, facility
-  data: { type: Object, required: true }, // actual report snapshot
+  filters: { type: Object }, 
+  data: { type: Object, required: true }, 
   notes: { type: String },
+  fileUrl: { type: String, default: null }, 
 }, { timestamps: true });
 
 // Optional indexes for querying by type or date

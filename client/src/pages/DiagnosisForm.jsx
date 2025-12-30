@@ -1,195 +1,207 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  createDiagnosis,
-  updateDiagnosis,
-} from "../redux/slices/diagnosisSlice";
+import { createDiagnosis, updateDiagnosis } from "../redux/slices/diagnosisSlice";
 import { fetchPatients } from "../redux/slices/patientSlice";
-import {
-  fetchLabTestsByPatient,
-  labTestsSelectors,
-} from "../redux/slices/labTestsSlice";
-import { toast } from "react-toastify";
+import { fetchLabTestsByPatient, labTestsSelectors } from "../redux/slices/labTestsSlice";
+import { 
+  X, User, ClipboardList, Beaker, FileText, 
+  ChevronRight, CheckCircle2, AlertCircle, CheckCircle
+} from "lucide-react";
 
 const DiagnosisForm = ({ onClose, existing }) => {
   const dispatch = useDispatch();
 
-  // Patients
+  // Data Selectors
   const patients = useSelector((state) => state.patients?.items || []);
-  const patientsLoading = useSelector(
-    (state) => state.patients?.loading || false
-  );
-
-  // Lab Tests
   const labResults = useSelector(labTestsSelectors.selectAll);
-  const labLoading = useSelector(
-    (state) => state.labTests?.loading === "pending"
-  );
+  const labLoading = useSelector((state) => state.labTests?.loading === "pending");
 
-  // Local state
+  // Matching Toast State from Patient module
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+  
   const [formData, setFormData] = useState({
     patient: existing?.patient?._id || "",
     diagnosisType: existing?.diagnosisType || "",
     notes: existing?.notes || "",
+    labTests: existing?.labTests?.map(lt => lt._id || lt) || [],
   });
 
-  // Fetch patients on mount
   useEffect(() => {
-    dispatch(fetchPatients({ page: 1, limit: 50 }));
+    dispatch(fetchPatients({ page: 1, limit: 100 }));
   }, [dispatch]);
 
-  // Fetch lab tests when patient changes
   useEffect(() => {
     if (formData.patient) {
       dispatch(fetchLabTestsByPatient(formData.patient));
     }
   }, [formData.patient, dispatch]);
 
-  // Handle form changes
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  useEffect(() => {
+    if (labResults.length > 0 && !existing) {
+      const ids = labResults.map(lr => lr._id);
+      setFormData(prev => ({ ...prev, labTests: ids }));
+    }
+  }, [labResults, existing]);
+
+  // Toast helper matching the dashboard logic
+  const showToast = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+      if (type === "success") onClose(); // Close only on success
+    }, 2000);
   };
 
-  // Handle form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    
     if (!formData.patient || !formData.diagnosisType) {
-      toast.error(
-        "Please select both a patient and a diagnosis type before saving."
-      );
+      showToast("Please select a patient and diagnosis type", "error");
       return;
     }
 
     try {
-      if (existing) {
-        // Update mode
-        await dispatch(
-          updateDiagnosis({ id: existing._id, updates: formData })
-        ).unwrap();
-        toast.success("Diagnosis updated successfully!");
-      } else {
-        // Create mode
-        await dispatch(createDiagnosis(formData)).unwrap();
-        toast.success("Diagnosis created successfully!");
-        setFormData({ patient: "", diagnosisType: "", notes: "" });
-      }
+      const payload = {
+        patient: formData.patient,
+        diagnosisType: formData.diagnosisType,
+        notes: formData.notes,
+        labTests: formData.labTests
+      };
 
-      onClose();
+      if (existing) {
+        await dispatch(updateDiagnosis({ id: existing._id, updates: payload })).unwrap();
+        showToast("Clinical record updated successfully");
+      } else {
+        await dispatch(createDiagnosis(payload)).unwrap();
+        showToast("Diagnosis recorded successfully");
+      }
     } catch (err) {
-      console.error("Diagnosis save failed:", err);
-      const backendMsg =
-        err?.response?.data?.message ||
-        err?.message ||
-        "Could not save diagnosis. Please review the form and try again.";
-      toast.error(backendMsg);
+      showToast(err?.message || "Operation failed", "error");
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white text-black p-6 rounded-lg shadow-lg w-full max-w-lg relative">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-4 text-gray-600 text-lg"
-        >
-          &times;
-        </button>
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[130] p-4">
+      {/* Internal Toast - Z-index higher than modal */}
+      {toast.show && (
+        <div className={`fixed top-10 right-10 z-[140] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl border animate-in fade-in slide-in-from-top-4 ${
+          toast.type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-red-50 border-red-200 text-red-800"
+        }`}>
+          {toast.type === "success" ? <CheckCircle size={20}/> : <AlertCircle size={20}/>}
+          <p className="font-bold">{toast.message}</p>
+        </div>
+      )}
 
-        {/* Header */}
-        <h2 className="text-xl font-bold mb-4 text-blue-700">
-          {existing ? "Edit Diagnosis" : "Create Diagnosis"}
-        </h2>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Patient Dropdown */}
+      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh] animate-in zoom-in duration-200">
+        
+        {/* Header - Consistent with PatientForm */}
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div>
-            <label className="block mb-1 font-medium">Patient</label>
+            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+              <ClipboardList className="text-blue-600" size={24} />
+              {existing ? "Edit Record" : "New Diagnosis"}
+            </h2>
+            <p className="text-xs text-slate-500 font-medium">Verify lab history before confirming conclusion</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-900 transition-all border border-transparent hover:border-slate-200">
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-8 overflow-y-auto space-y-6 custom-scrollbar">
+          
+          {/* Patient Selection */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <User size={12}/> Select Patient
+            </label>
             <select
               name="patient"
               value={formData.patient}
-              onChange={handleChange}
-              className="w-full border p-2 rounded"
-              required
+              onChange={(e) => setFormData({...formData, patient: e.target.value})}
+              className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-blue-100 transition-all outline-none appearance-none cursor-pointer"
               disabled={!!existing}
+              required
             >
-              <option value="">Select Patient</option>
-              {patientsLoading ? (
-                <option>Loading...</option>
-              ) : (
-                patients.map((p) => (
-                  <option key={p._id} value={p._id}>
-                    {p.firstName} {p.lastName} (MRN: {p.mrn})
-                  </option>
-                ))
-              )}
+              <option value="">Search for patient...</option>
+              {patients.map((p) => (
+                <option key={p._id} value={p._id}>{p.firstName} {p.lastName} (MRN: {p.mrn})</option>
+              ))}
             </select>
           </div>
 
-          {/* Lab Results Section */}
+          {/* Lab Evidence Section - Highlighting the "Refined" UI */}
           {formData.patient && (
-            <div className="bg-gray-50 border p-3 rounded">
-              <h3 className="font-semibold mb-2 text-gray-700">Lab Results</h3>
-              {labLoading ? (
-                <p>Loading lab results...</p>
-              ) : labResults.length > 0 ? (
-                <ul className="list-disc pl-5 space-y-1">
-                  {labResults.map((lr) => (
-                    <li key={lr._id}>
-                      <span className="font-medium">{lr.testType}:</span>{" "}
-                      <span className="text-blue-700">
-                        {lr.result || "N/A"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>No lab results for this patient.</p>
-              )}
+            <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                  <Beaker size={14}/> Evidence (Last Lab Tests)
+                </h3>
+                {labLoading && <div className="text-[10px] font-bold text-blue-400 animate-pulse uppercase">Syncing...</div>}
+              </div>
+              
+              <div className="space-y-2">
+                {labResults.length > 0 ? (
+                  labResults.slice(0, 3).map((lr) => (
+                    <div key={lr._id} className="flex items-center justify-between bg-white p-3 rounded-xl border border-blue-50 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600"><FileText size={14}/></div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-700">{lr.testType}</p>
+                          <p className="text-[10px] text-slate-400 font-black italic uppercase tracking-tighter">{lr.result}</p>
+                        </div>
+                      </div>
+                      <CheckCircle2 size={16} className="text-emerald-500" />
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-slate-400 text-xs font-medium italic">No recent lab tests found for this patient.</div>
+                )}
+              </div>
             </div>
           )}
 
-          {/* Diagnosis Dropdown */}
-          <div>
-            <label className="block mb-1 font-medium">Diagnosis</label>
-            <select
-              name="diagnosisType"
-              value={formData.diagnosisType}
-              onChange={handleChange}
-              className="w-full border p-2 rounded"
-              required
-            >
-              <option value="">Select Diagnosis</option>
-              <option value="Pulmonary TB">Pulmonary TB</option>
-              <option value="Extra-pulmonary TB">Extra-pulmonary TB</option>
-              <option value="No TB">No TB</option>
-              <option value="Suspected TB">Suspected TB</option>
-            </select>
+          {/* Diagnosis Type Selection - The "Toggle" Style */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Medical Conclusion</label>
+            <div className="grid grid-cols-2 gap-3">
+              {['Pulmonary TB', 'Extra-pulmonary TB', 'No TB', 'Suspected TB'].map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setFormData({...formData, diagnosisType: type})}
+                  className={`p-4 rounded-xl border text-[11px] font-bold transition-all flex items-center justify-between group ${
+                    formData.diagnosisType === type 
+                    ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100' 
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300'
+                  }`}
+                >
+                  {type}
+                  {formData.diagnosisType === type && <CheckCircle2 size={14} className="animate-in zoom-in" />}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Notes */}
-          <div>
-            <label className="block mb-1 font-medium">Notes (optional)</label>
+          {/* Clinical Observation Notes */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Clinical Observation</label>
             <textarea
               name="notes"
               value={formData.notes}
-              onChange={handleChange}
-              className="w-full border p-2 rounded"
-              placeholder="Additional notes..."
+              onChange={(e) => setFormData({...formData, notes: e.target.value})}
+              className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl text-sm text-slate-700 h-28 outline-none focus:ring-4 focus:ring-blue-100 transition-all resize-none font-medium"
+              placeholder="Enter specific notes or clinical findings..."
             />
           </div>
 
-          {/* Submit Button */}
+          {/* Submit Action */}
           <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 font-semibold"
-          >
-            {existing ? "Update Diagnosis" : "Save Diagnosis"}
-          </button>
+  type="submit"
+  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-blue-100 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+>
+  {existing ? "Save Clinical Update" : "Finalize Diagnosis"} <ChevronRight size={18}/>
+</button>
         </form>
       </div>
     </div>

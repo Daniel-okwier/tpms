@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import Card from "../components/shared/Card";
+import Card from "../components/shared/StatCard";
 import { Users, Calendar, FileText, FlaskConical } from "lucide-react";
 import PieChart from "../components/charts/PieChart";
 import LineChart from "../components/charts/LineChart";

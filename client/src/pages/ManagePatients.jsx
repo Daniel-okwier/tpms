@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { 
   Plus, Search, UserRoundPen, Archive, Eye, 
-  CheckCircle, AlertCircle, Building2, Users, Activity, Clock
+  CheckCircle, AlertCircle, Building2, Users, Activity, Clock, Loader2
 } from "lucide-react"; 
 import { fetchPatients, archivePatient, updatePatient, createPatient } from "@/redux/slices/patientSlice";
 import PatientForm from "./PatientForm";
@@ -11,6 +11,8 @@ import PatientForm from "./PatientForm";
 export default function Patients() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  
+  // Get loading state along with items from Redux
   const { items = [], loading } = useSelector((state) => state.patients);
   
   const [showForm, setShowForm] = useState(false);
@@ -22,13 +24,11 @@ export default function Patients() {
     dispatch(fetchPatients());
   }, [dispatch]);
 
-  // --- 🔍 CLIENT-SIDE FILTERING LOGIC (Same as your DiagnosisPage) ---
   const filteredPatients = items.filter((p) => {
     const fullName = `${p.firstName || ""} ${p.lastName || ""}`.toLowerCase();
     const mrn = p.mrn?.toLowerCase() || "";
     const facility = p.facilityName?.toLowerCase() || "";
     const query = searchTerm.toLowerCase();
-
     return fullName.includes(query) || mrn.includes(query) || facility.includes(query);
   });
 
@@ -62,7 +62,6 @@ export default function Patients() {
 
   return (
     <div className="p-6 space-y-8 max-w-7xl mx-auto relative min-h-screen">
-      {/* Toast Notification */}
       {toast.show && (
         <div className={`fixed top-10 right-10 z-[120] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl border ${
           toast.type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-red-50 border-red-200 text-red-800"
@@ -75,8 +74,8 @@ export default function Patients() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 uppercase tracking-tight">Patient Information System</h1>
-          <p className="text-slate-500 text-sm font-medium">Registry Management Overview</p>
+          <h1 className="text-2xl font-bold text-slate-900 uppercase tracking-tight">Patients Dashboard</h1>
+          <p className="text-slate-500 text-sm font-medium">Registry Management</p>
         </div>
         <button 
           onClick={() => { setEditingPatient(null); setShowForm(true); }} 
@@ -86,7 +85,7 @@ export default function Patients() {
         </button>
       </div>
 
-      {/* Statistics */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5">
           <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-bold"><Users size={28} /></div>
@@ -102,22 +101,29 @@ export default function Patients() {
         </div>
       </div>
 
-      {/* Search Bar */}
+      {/* Search Input */}
       <div className="flex max-w-md bg-white border border-slate-200 rounded-xl shadow-sm focus-within:ring-4 focus-within:ring-blue-50 overflow-hidden">
         <div className="pl-4 flex items-center text-slate-400">
           <Search size={20} />
         </div>
         <input 
-          placeholder="Search Name, MRN, or Facility..."
+          placeholder="Search Name, MRN.."
           className="flex-1 pl-3 py-2.5 outline-none text-slate-600"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
-      {/* Table & Results */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[300px]">
-        {filteredPatients.length > 0 ? (
+      {/* Main Content Area */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[400px] flex flex-col">
+        {loading ? (
+          /* 1. LOADING STATE: Shown on refresh while data is fetching */
+          <div className="flex-1 flex flex-col items-center justify-center space-y-4">
+            <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+            <p className="text-slate-500 font-medium tracking-wide uppercase text-xs">Synchronizing Registry...</p>
+          </div>
+        ) : filteredPatients.length > 0 ? (
+          /* 2. DATA TABLE: Shown when data is ready */
           <table className="w-full text-left">
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
@@ -159,12 +165,11 @@ export default function Patients() {
             </tbody>
           </table>
         ) : (
-          /* Empty State when filteredPatients has 0 results */
-          <div className="py-24 text-center flex flex-col items-center justify-center">
+          <div className="flex-1 py-24 text-center flex flex-col items-center justify-center">
              <div className="bg-slate-50 p-6 rounded-full mb-4 text-slate-200"><Search size={48}/></div>
-             <p className="text-slate-500 text-lg font-bold">Patient Not Found</p>
+             <p className="text-slate-500 text-lg font-bold">No Records Found</p>
              <p className="text-slate-400 text-sm mt-1 max-w-xs mx-auto text-center">
-               We couldn't find any records matching <span className="text-blue-600 font-bold">"{searchTerm}"</span>.
+               {searchTerm ? `No results for "${searchTerm}"` : "The patient registry is currently empty."}
              </p>
           </div>
         )}

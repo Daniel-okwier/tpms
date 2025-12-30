@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { createTreatment, updateTreatment } from "../redux/slices/treatmentSlice";
+import { createTreatment, updateTreatment, fetchTreatments } from "../redux/slices/treatmentSlice"; // Added fetchTreatments import
 import { fetchPatients } from "../redux/slices/patientSlice";
 import { fetchDiagnoses } from "../redux/slices/diagnosisSlice";
 import { toast } from "react-toastify";
@@ -92,7 +93,11 @@ const TreatmentForm = ({ existing, onClose }) => {
             }
             onClose();
         } catch (err) {
-            const message = err?.response?.data?.message || err.message || "Failed to save treatment.";
+            // FIX: Safely extract the error message from the nested Redux/Axios error object
+            const message = 
+                err?.message ||                       // Fallback for simple error strings
+                err?.response?.data?.message ||       // Common backend error structure
+                "Failed to save treatment.";
             toast.error(message);
         }
     };

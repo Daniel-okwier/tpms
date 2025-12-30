@@ -8,6 +8,8 @@ import {
   Calendar,
   Stethoscope,
   FileText,
+  Pill, 
+  Scan, 
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import logo from "../../assets/Logoportal.png";
@@ -18,13 +20,21 @@ export default function Sidebar() {
   const facilityName = import.meta.env.VITE_FACILITY_NAME || "TPMS";
 
   const navItems = [
-    { name: "Dashboard", path: "/dashboard", icon: Activity, roles: ["admin","doctor","lab_staff","nurse"] },
-    { name: "Patients", path: "/patients", icon: Users, roles: ["admin","nurse","doctor"] },
-    { name: "Diagnosis", path: "/diagnosis", icon: ClipboardList, roles: ["admin","nurse","doctor"] },
-    { name: "Lab Tests", path: "/labtests", icon: FlaskConical, roles: ["admin","nurse","lab_staff"] },
-    { name: "Screenings", path: "/screenings", icon: Stethoscope, roles: ["admin","nurse","doctor"] },
-    { name: "Appointments", path: "/appointments", icon: Calendar, roles: ["admin","nurse","doctor"] },
-    { name: "Treatments", path: "/treatments", icon: ClipboardList, roles: ["admin","nurse","doctor"] },
+   // { name: "Dashboard", path: "/dashboard", icon: Activity, roles: ["admin", "doctor", "lab_staff", "nurse"] },
+    { name: "Patients", path: "/patients", icon: Users, roles: ["admin", "nurse", "doctor"] },
+    { name: "Diagnosis", path: "/diagnosis", icon: ClipboardList, roles: ["admin", "nurse", "doctor"] },
+    { name: "Lab Tests", path: "/labtests", icon: FlaskConical, roles: ["admin", "nurse", "lab_staff"] },
+    
+    //  Added Radiology Management
+    { name: "Radiology", path: "/radiology", icon: Scan, roles: ["admin", "doctor", "radiologist", "nurse"] },
+    
+    { name: "Screenings", path: "/screenings", icon: Stethoscope, roles: ["admin", "nurse", "doctor"] },
+    //{ name: "Appointments", path: "/appointments", icon: Calendar, roles: ["admin", "nurse", "doctor"] },
+    { name: "Treatments", path: "/treatments", icon: ClipboardList, roles: ["admin", "nurse", "doctor"] },
+    
+    // Added Pharmacy Management
+    { name: "Pharmacy", path: "/pharmacy", icon: Pill, roles: ["admin", "doctor", "pharmacist", "nurse"] },
+    
     { name: "Reports", path: "/reports", icon: FileText, roles: ["admin"] },
     { name: "Manage Users", path: "/manage-users", icon: Users, roles: ["admin"] },
   ];
@@ -39,9 +49,11 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto"> {/* Added overflow-y-auto in case list gets long */}
         {navItems.map((item) => {
+          // Check if user role is allowed to see this item
           if (!item.roles.includes(user?.role)) return null;
+          
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
           return (

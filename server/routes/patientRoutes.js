@@ -6,18 +6,16 @@ import {
   searchPatient,
   updatePatient,
   archivePatient,
+  getPatientById, // Import the new controller
 } from "../controllers/patientController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Create patient
+// 1. Static/Search Routes first
 router.post("/", protect, authorizeRoles("admin", "doctor", "nurse"), createPatient);
-
-// Get all active patients (paginated)
 router.get("/", protect, authorizeRoles("admin", "doctor", "nurse", "lab_staff"), getPatients);
 
-// Search patients
 router.get(
   "/search",
   protect,
@@ -25,18 +23,22 @@ router.get(
   searchPatient
 );
 
-// Update patient
-router.put("/:id", protect, authorizeRoles( "doctor","nurse"), updatePatient);
-
-// Archive patient
-router.delete("/:id", protect, authorizeRoles( "doctor","nurse"), archivePatient);
-
-// Get archived patients (paginated)
 router.get(
   "/archived",
   protect,
-  authorizeRoles( "doctor","nurse"),
+  authorizeRoles("doctor", "nurse", "admin"),
   getArchivedPatients
 );
+
+// 2. Dynamic ID Routes last
+router.get(
+  "/:id", 
+  protect, 
+  authorizeRoles("admin", "doctor", "nurse", "lab_staff"), 
+  getPatientById
+);
+
+router.put("/:id", protect, authorizeRoles("doctor", "nurse"), updatePatient);
+router.delete("/:id", protect, authorizeRoles("doctor", "nurse"), archivePatient);
 
 export default router;

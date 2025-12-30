@@ -121,4 +121,9 @@ export const deleteUser = async (id) => {
   return { message: "User removed" };
 };
 
-
+// Get specific user by ID (admin only)
+export const getUserById = async (id) => {
+  const user = await User.findById(id).select("-password");
+  if (!user) throw new Error("User not found");
+  return user;
+};

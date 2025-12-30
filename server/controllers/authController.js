@@ -118,3 +118,16 @@ export const deleteUser = async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 };
+
+
+// -------------------------
+// Get specific user by ID (admin only)
+// -------------------------
+export const getUserById = async (req, res) => {
+  try {
+    const user = await authService.getUserById(req.params.id);
+    res.json(user);
+  } catch (err) {
+    res.status(404).json({ message: err.message });
+  }
+};

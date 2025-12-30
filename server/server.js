@@ -12,6 +12,10 @@ import labTestRoutes from './routes/labTestRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import screeningRoutes from './routes/screeningRoutes.js';
 import treatmentRoutes from './routes/treatmentRoutes.js';
+import drugRoutes from './routes/drugRoutes.js';
+import prescriptionRoutes from './routes/prescriptionRoutes.js';
+// ✅ ADDED: Import the Radiology Routes
+import radiologyRoutes from './routes/radiologyRoutes.js'; 
 
 import errorHandler from './middleware/errorHandler.js';
 
@@ -19,7 +23,6 @@ dotenv.config();
 connectDB();
 
 const app = express();
-
 
 app.use(
   cors({
@@ -40,6 +43,12 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/screenings', screeningRoutes);
 app.use('/api/appointment', appointmentRoutes);
 app.use('/api/treatments', treatmentRoutes);
+app.use('/api/drugs', drugRoutes);
+app.use('/api/prescriptions', prescriptionRoutes);
+
+// ✅ ADDED: Register the Radiology Routes
+// This matches the API_URL = '/api/radiology/' in your Redux slice
+app.use('/api/radiology', radiologyRoutes);
 
 app.get('/', (req, res) => {
   res.send('TPMS Backend API is running...');
@@ -53,5 +62,5 @@ app.use((req, res, next) => {
 // Global error handler 
 app.use(errorHandler);
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000; 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -7,12 +7,10 @@ const diagnosisSchema = new mongoose.Schema(
       ref: 'Patient',
       required: true,
     },
-    labTests: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'LabTest',
-      },
-    ],
+    labTests: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'LabTest',
+    }],
     diagnosisType: {
       type: String,
       enum: ['Pulmonary TB', 'Extra-pulmonary TB', 'No TB', 'Suspected TB'],
@@ -32,5 +30,6 @@ const diagnosisSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const Diagnosis = mongoose.model('Diagnosis', diagnosisSchema);
+// Prevent OverwriteModelError
+const Diagnosis = mongoose.models.Diagnosis || mongoose.model('Diagnosis', diagnosisSchema);
 export default Diagnosis;

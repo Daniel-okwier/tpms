@@ -31,6 +31,6 @@ router.post('/:id/follow-up', protect, authorizeRoles('doctor','nurse'), addFoll
 router.post('/:id/complete', protect, authorizeRoles('doctor','admin'), completeTreatment);
 
 // Archive treatment (admin)
-router.delete('/:id', protect, authorizeRoles('admin'), archiveTreatment);
+router.delete('/:id', protect, authorizeRoles('doctor'), archiveTreatment);
 
 export default router;

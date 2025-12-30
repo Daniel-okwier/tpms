@@ -3,11 +3,7 @@ import Treatment from '../models/treatment.js';
 import LabTest from '../models/labTest.js';
 import puppeteer from 'puppeteer'; 
 
-//PDF GENERATION HTML HELPER 
-
-
- //Structures the aggregated data into an HTML document for PDF rendering.
- 
+// PDF GENERATION HTML HELPER 
 const createReportHtml = (reportData, filters) => {
     const tsr = reportData.TSR_Analysis.map(item => 
         `<li>${item._id}: <strong>${item.count}</strong> cases</li>`
@@ -60,37 +56,60 @@ const createReportHtml = (reportData, filters) => {
 };
 
 
- //Generates the PDF buffer using Puppeteer.
- 
+// Generates the PDF buffer using Puppeteer with robust error handling.
 const generatePDFBuffer = async (htmlContent, reportTitle) => {
     const fileName = `${reportTitle.replace(/\s/g, '_')}_${Date.now()}.pdf`;
 
-    const browser = await puppeteer.launch({ 
-        args: ['--no-sandbox', '--disable-setuid-sandbox'] 
-    });
-    
-    const page = await browser.newPage();
-    
-    // Inject the HTML content
-    await page.setContent(htmlContent, { waitUntil: 'networkidle0' }); 
-    
-    // Generate the PDF buffer
-    const pdfBuffer = await page.pdf({ 
-        format: 'A4', 
-        printBackground: true, 
-        margin: { top: '1cm', right: '1cm', bottom: '1cm', left: '1cm' }
-    });
-    
-    await browser.close();
-    
-    return { buffer: pdfBuffer, fileName };
+    let browser; 
+
+    try {
+        // Launch Puppeteer with increased timeout and stable arguments
+        browser = await puppeteer.launch({ 
+            headless: 'new',
+            // Increased timeout for launch stabilization
+            timeout: 60000, 
+            args: [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage', 
+            ]
+        });
+        
+        const page = await browser.newPage();
+        
+        // FIX: Changed waitUntil to 'domcontentloaded' and increased timeout to prevent rendering timeout error
+        await page.setContent(htmlContent, { 
+            waitUntil: 'domcontentloaded', // Waits only for DOM parsing, ignoring network resources
+            timeout: 60000 // Increased timeout to 60 seconds
+        }); 
+        
+        const pdfBuffer = await page.pdf({ 
+            format: 'A4', 
+            printBackground: true, 
+            margin: { top: '1cm', right: '1cm', bottom: '1cm', left: '1cm' }
+        });
+        
+        await browser.close(); 
+        
+        return { buffer: pdfBuffer, fileName };
+
+    } catch (error) {
+        console.error("Puppeteer PDF Generation Failed:", error);
+        
+        // Ensure the browser is closed even on failure to free up resources
+        if (browser) {
+            await browser.close().catch(e => console.error("Failed to close browser after crash:", e));
+        }
+
+        // Throw a controlled error message for the controller to handle
+        throw new Error('Failed to generate PDF report due to server processing error. Check server resources.');
+    }
 };
 
 
- //Gets strategic report data, generates the PDF buffer, and returns it.
- 
+// Gets strategic report data, generates the PDF buffer, and returns it.
 export const generateTBPublicHealthReportService = async (filters = {}) => {
-    const { startDate, endDate, facilityId } = filters;
+    const { startDate, endDate } = filters;
     const dateFilter = {};
     if (startDate || endDate) {
         if (startDate) dateFilter.$gte = new Date(startDate);
@@ -104,7 +123,7 @@ export const generateTBPublicHealthReportService = async (filters = {}) => {
     ]);
 
     const notificationTrend = await Patient.aggregate([
-        { $match: { createdAt: dateFilter, facilityId: facilityId || { $exists: true } } },
+        { $match: { createdAt: dateFilter } }, 
         { 
             $group: {
                 _id: { 
@@ -128,7 +147,6 @@ export const generateTBPublicHealthReportService = async (filters = {}) => {
         Relapse_Count: relapseCount,
     };
 
-    // Generate the PDF buffer and filename
     const htmlContent = createReportHtml(reportData, filters);
     const { buffer, fileName } = await generatePDFBuffer(htmlContent, 'Quarterly_Public_Health_Report');
     
@@ -136,68 +154,70 @@ export const generateTBPublicHealthReportService = async (filters = {}) => {
 };
 
 
+// Existing operational services:
+
 export const getTrendsService = async (period = 'month') => {
-  const groupFormat = period === 'week' ? { $week: '$createdAt' } : { $month: '$createdAt' };
+    const groupFormat = period === 'week' ? { $week: '$createdAt' } : { $month: '$createdAt' };
 
-  const newPatientsTrend = await Patient.aggregate([
-    { $group: { _id: groupFormat, count: { $sum: 1 } } },
-    { $sort: { _id: 1 } }
-  ]);
+    const newPatientsTrend = await Patient.aggregate([
+        { $group: { _id: groupFormat, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+    ]);
 
-  const treatmentsTrend = await Treatment.aggregate([
-    { $group: { _id: groupFormat, count: { $sum: 1 } } },
-    { $sort: { _id: 1 } }
-  ]);
+    const treatmentsTrend = await Treatment.aggregate([
+        { $group: { _id: groupFormat, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+    ]);
 
-  const labPosTrend = await LabTest.aggregate([
-    { $match: { 'geneXpert.mtbDetected': 'detected' } },
-    { $group: { _id: groupFormat, count: { $sum: 1 } } },
-    { $sort: { _id: 1 } }
-  ]);
+    const labPosTrend = await LabTest.aggregate([
+        { $match: { 'geneXpert.mtbDetected': 'detected' } },
+        { $group: { _id: groupFormat, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+    ]);
 
-  return { period, data: { newPatientsTrend, treatmentsTrend, labPosTrend } };
+    return { period, data: { newPatientsTrend, treatmentsTrend, labPosTrend } };
 };
 
 export const getDashboardDataService = async (filters = {}) => {
-  const { startDate, endDate, treatmentPhase, patientStatus } = filters;
+    const { startDate, endDate, treatmentPhase, patientStatus } = filters;
 
-  const patientQuery = {};
-  if (patientStatus) patientQuery.treatmentStatus = patientStatus;
-  if (startDate || endDate) {
-    patientQuery.createdAt = {};
-    if (startDate) patientQuery.createdAt.$gte = new Date(startDate);
-    if (endDate) patientQuery.createdAt.$lte = new Date(endDate);
-  }
-
-  const treatmentQuery = {};
-  if (treatmentPhase) treatmentQuery.phase = treatmentPhase;
-  if (startDate || endDate) {
-    treatmentQuery.createdAt = {};
-    if (startDate) treatmentQuery.createdAt.$gte = new Date(startDate);
-    if (endDate) treatmentQuery.createdAt.$lte = new Date(endDate);
-  }
-
-  const totalPatients = await Patient.countDocuments(patientQuery);
-  const activePatients = await Patient.countDocuments({ ...patientQuery, treatmentStatus: 'ongoing' });
-  const completedPatients = await Patient.countDocuments({ ...patientQuery, treatmentStatus: 'completed' });
-  const defaultedPatients = await Patient.countDocuments({ ...patientQuery, treatmentStatus: 'defaulted' });
-
-  const totalTreatments = await Treatment.countDocuments(treatmentQuery);
-  const ongoingTreatments = await Treatment.countDocuments({ ...treatmentQuery, status: 'ongoing' });
-  const completedTreatments = await Treatment.countDocuments({ ...treatmentQuery, status: 'completed' });
-  const failedTreatments = await Treatment.countDocuments({ ...treatmentQuery, status: 'failed' });
-
-  const totalTests = await LabTest.countDocuments();
-  const completedTests = await LabTest.countDocuments({ status: 'completed' });
-  const positiveGeneXpert = await LabTest.countDocuments({ 'geneXpert.mtbDetected': 'detected' });
-  const positiveSmear = await LabTest.countDocuments({ 'smear.result': 'positive' });
-
-  return {
-    filters,
-    data: {
-      patients: { totalPatients, activePatients, completedPatients, defaultedPatients },
-      treatments: { totalTreatments, ongoingTreatments, completedTreatments, failedTreatments },
-      labTests: { totalTests, completedTests, positiveGeneXpert, positiveSmear },
+    const patientQuery = {};
+    if (patientStatus) patientQuery.treatmentStatus = patientStatus;
+    if (startDate || endDate) {
+        patientQuery.createdAt = {};
+        if (startDate) patientQuery.createdAt.$gte = new Date(startDate);
+        if (endDate) patientQuery.createdAt.$lte = new Date(endDate);
     }
-  };
+
+    const treatmentQuery = {};
+    if (treatmentPhase) treatmentQuery.phase = treatmentPhase;
+    if (startDate || endDate) {
+        treatmentQuery.createdAt = {};
+        if (startDate) treatmentQuery.createdAt.$gte = new Date(startDate);
+        if (endDate) treatmentQuery.createdAt.$lte = new Date(endDate);
+    }
+
+    const totalPatients = await Patient.countDocuments(patientQuery);
+    const activePatients = await Patient.countDocuments({ ...patientQuery, treatmentStatus: 'ongoing' });
+    const completedPatients = await Patient.countDocuments({ ...patientQuery, treatmentStatus: 'completed' });
+    const defaultedPatients = await Patient.countDocuments({ ...patientQuery, treatmentStatus: 'defaulted' });
+
+    const totalTreatments = await Treatment.countDocuments(treatmentQuery);
+    const ongoingTreatments = await Treatment.countDocuments({ ...treatmentQuery, status: 'ongoing' });
+    const completedTreatments = await Treatment.countDocuments({ ...treatmentQuery, status: 'completed' });
+    const failedTreatments = await Treatment.countDocuments({ ...treatmentQuery, status: 'failed' });
+
+    const totalTests = await LabTest.countDocuments();
+    const completedTests = await LabTest.countDocuments({ status: 'completed' });
+    const positiveGeneXpert = await LabTest.countDocuments({ 'geneXpert.mtbDetected': 'detected' });
+    const positiveSmear = await LabTest.countDocuments({ 'smear.result': 'positive' });
+
+    return {
+        filters,
+        data: {
+            patients: { totalPatients, activePatients, completedPatients, defaultedPatients },
+            treatments: { totalTreatments, ongoingTreatments, completedTreatments, failedTreatments },
+            labTests: { totalTests, completedTests, positiveGeneXpert, positiveSmear },
+        }
+    };
 };

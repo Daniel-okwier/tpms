@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import VisitList from "./VisitList";
 import VisitActionModal from "./VisitActionModal";
+import { toast } from "react-toastify";
 
 const TreatmentDetail = ({
   treatment,
@@ -24,63 +25,101 @@ const TreatmentDetail = ({
     createdBy,
   } = treatment;
 
-  // Group follow-ups by date
+  // 🔥 FIX: Store only the LATEST follow-up object for a given date.
   const followUpsByDate = useMemo(() => {
     const map = {};
+    // By iterating through the followUps array, the last one for a date will overwrite previous ones,
+    // ensuring we get the FINAL, most recent status and data for that date.
     followUps.forEach((f) => {
-      if (!f || !f.date) return;
-      const key = new Date(f.date).toISOString().split("T")[0];
-      map[key] = map[key] || [];
-      map[key].push(f);
+      if (f && f.date) {
+        const key = new Date(f.date).toISOString().split("T")[0];
+        map[key] = f; 
+      }
     });
     return map;
   }, [followUps]);
 
-  // Modal state ONLY for EDIT VISIT
   const [modal, setModal] = useState({
     open: false,
     date: null,
     action: null,
+    initialData: {},
   });
 
-  const handleOpenEditModal = (dateIso) => {
-    setModal({ open: true, date: dateIso, action: "edit" });
+  const getVisitData = (dateIso) => {
+    const dateKey = new Date(dateIso).toISOString().split("T")[0];
+    // Now just retrieve the latest object directly
+    return followUpsByDate[dateKey] || {}; 
   };
 
-  const handleCloseModal = () =>
-    setModal({ open: false, date: null, action: null });
+  const handleOpenEditModal = (dateIso) => {
+    setModal({
+      open: true,
+      date: dateIso,
+      action: "edit",
+      initialData: getVisitData(dateIso),
+    });
+  };
+
+  const handleMarkComplete = (dateIso) => {
+    setModal({
+      open: true,
+      date: dateIso,
+      action: "complete",
+      initialData: {},
+    });
+  };
+
+  const handleMarkMissed = (dateIso) => {
+    setModal({
+      open: true,
+      date: dateIso,
+      action: "missed",
+      initialData: {},
+    });
+  };
+
+  const handleCloseModal = () => {
+    setModal({ open: false, date: null, action: null, initialData: {} });
+  };
 
   const handleSubmitModal = async (payload) => {
-    if (modal.action === "edit" && typeof onEditVisit === "function") {
-      await onEditVisit(modal.date, payload);
-    }
-    handleCloseModal();
-  };
+    const { action, date, initialData } = modal;
 
-  const handleMarkComplete = async (dateIso) => { 
-    try {
-      await onMarkComplete(dateIso, { treatmentId: treatment._id });
-      // Show success toast here
-    } catch (error) {
-      console.error("Error marking visit completed:", error);
-      // Show error toast here
-    }
-  };
+    let finalPayload = { ...payload };
+    let submitFunction = onEditVisit;
+    let successMessage = "";
 
-  const handleMarkMissed = async (dateIso) => {
+    if (action === "edit") {
+      // Preserve the current status if editing the data/notes, unless explicitly changing the status
+      finalPayload = { ...payload, status: payload.status || initialData.status }; 
+      successMessage = "Visit data updated successfully.";
+      submitFunction = onEditVisit; // Use onEditVisit for existing records
+    } else if (action === "complete") {
+      finalPayload = { ...payload, status: 'completed' };
+      successMessage = "Visit marked as completed.";
+      submitFunction = onMarkComplete;
+    } else if (action === "missed") {
+      finalPayload = { notes: payload.notes, status: 'missed' };
+      successMessage = "Visit marked as missed.";
+      submitFunction = onMarkMissed;
+    }
+
     try {
-      await onMarkMissed(dateIso, { treatmentId: treatment._id });
-      // Show success toast here
+      // The submit function (handleAddOrUpdateVisit) now includes the toast.success, 
+      // but keeping this one for consistency with your existing code logic.
+      await submitFunction(date, finalPayload); 
+      // toast.success(successMessage); // Duplicative toast removed if handleAddOrUpdateVisit handles it
+      handleCloseModal();
     } catch (error) {
-      console.error("Error marking visit missed:", error);
+      console.error(`Error processing ${action} visit:`, error);
+      toast.error(`Failed to ${action} visit.`);
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 p-4 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-lg p-6 overflow-y-auto max-h-[90vh]">
-        
-        {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <h2 className="text-2xl font-bold text-gray-900">Treatment Details</h2>
           <button
@@ -92,7 +131,6 @@ const TreatmentDetail = ({
           </button>
         </div>
 
-        {/* Summary */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div className="bg-gray-50 rounded-lg p-4">
             <h3 className="text-lg font-semibold text-gray-800 mb-2">Patient</h3>
@@ -122,22 +160,13 @@ const TreatmentDetail = ({
             )}
             <p className="mt-2">
               <span className="font-medium">Status:</span>{" "}
-              <span
-                className={`inline-block px-2 py-1 rounded text-sm ${
-                  status === "completed"
-                    ? "bg-green-100 text-green-800"
-                    : status === "ongoing"
-                    ? "bg-yellow-100 text-yellow-800"
-                    : "bg-gray-100 text-gray-800"
-                }`}
-              >
+              <span className={`inline-block px-2 py-1 rounded text-sm ${status === "completed" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
                 {status}
               </span>
             </p>
           </div>
         </div>
 
-        {/* Metadata */}
         <div className="mb-6 text-sm text-gray-700">
           <p>
             <span className="font-medium">Created By:</span> {createdBy?.name || "N/A"} ({createdBy?.role || "N/A"})
@@ -147,15 +176,13 @@ const TreatmentDetail = ({
           </p>
         </div>
 
-        {/* Follow-up Visits */}
         <div className="mb-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-3">Follow-up Visits</h3>
-
           <VisitList
             visitSchedule={Array.isArray(visitSchedule) ? visitSchedule : []}
             followUpsByDate={followUpsByDate}
-            onMarkComplete={handleMarkComplete} 
-            onMarkMissed={handleMarkMissed}     
+            onMarkComplete={handleMarkComplete}
+            onMarkMissed={handleMarkMissed}
             onEditVisit={handleOpenEditModal}
           />
         </div>
@@ -170,11 +197,11 @@ const TreatmentDetail = ({
         </div>
       </div>
 
-      {/* EDIT VISIT MODAL ONLY */}
       <VisitActionModal
         open={modal.open}
         date={modal.date}
         action={modal.action}
+        initialData={modal.initialData} 
         onClose={handleCloseModal}
         onSubmit={handleSubmitModal}
       />

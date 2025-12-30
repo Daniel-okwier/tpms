@@ -1,62 +1,58 @@
 import express from 'express';
 import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
 import {
-  getPatientStats,
-  getTreatmentOutcomes,
-  getLabSummary,
-  getAppointmentMetrics,
-  getTrends,
-  getFullDashboard
+    getPatientStats,
+    getTreatmentOutcomes,
+    getLabSummary,
+    getTrends,
+    getFullDashboard,
+    downloadPublicHealthReport
 } from '../controllers/reportController.js';
 
 const router = express.Router();
 
-// Patient stats
+// Generate the strategic report PDF and stream it to the client.
 router.get(
-  '/patient-stats',
-  protect,
-  authorizeRoles('admin', 'doctor'),
-  getPatientStats
+    '/public-health/download', 
+    protect,
+    authorizeRoles('admin'), 
+    downloadPublicHealthReport
 );
 
-// Treatment outcomes
+
 router.get(
-  '/treatment-outcomes',
-  protect,
-  authorizeRoles('admin', 'doctor'),
-  getTreatmentOutcomes
+    '/patient-stats',
+    protect,
+    authorizeRoles('admin'),
+    getPatientStats
 );
 
-// Lab test summary
 router.get(
-  '/lab-summary',
-  protect,
-  authorizeRoles('admin', 'doctor', 'lab_staff'),
-  getLabSummary
+    '/treatment-outcomes',
+    protect,
+    authorizeRoles('admin'),
+    getTreatmentOutcomes
 );
 
-// Appointment metrics
 router.get(
-  '/appointments',
-  protect,
-  authorizeRoles('admin', 'doctor', 'nurse'),
-  getAppointmentMetrics
+    '/lab-summary',
+    protect,
+    authorizeRoles('admin'),
+    getLabSummary
 );
 
-// Trends
 router.get(
-  '/trends',
-  protect,
-  authorizeRoles('admin', 'doctor'),
-  getTrends
+    '/trends',
+    protect,
+    authorizeRoles('admin'),
+    getTrends
 );
 
-// Full aggregated dashboard
 router.get(
-  '/full-dashboard',
-  protect,
-  authorizeRoles('admin', 'doctor'),
-  getFullDashboard
+    '/full-dashboard',
+    protect,
+    authorizeRoles('admin'),
+    getFullDashboard
 );
 
 export default router;
