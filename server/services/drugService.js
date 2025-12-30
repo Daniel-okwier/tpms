@@ -1,4 +1,4 @@
-import Drug from '../models/Drug.js';
+import Drug from '../models/drug.js';
 
 class DrugService {
     static async createDrug(drugData) {
