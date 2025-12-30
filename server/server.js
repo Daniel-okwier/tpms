@@ -26,7 +26,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: "*", 
+    origin: "https://tpms-iota.vercel.app", 
     credentials: true,
   })
 );
