@@ -26,7 +26,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: "http://localhost:5173", 
+    origin: "*", 
     credentials: true,
   })
 );
@@ -46,8 +46,6 @@ app.use('/api/treatments', treatmentRoutes);
 app.use('/api/drugs', drugRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 
-// ✅ ADDED: Register the Radiology Routes
-// This matches the API_URL = '/api/radiology/' in your Redux slice
 app.use('/api/radiology', radiologyRoutes);
 
 app.get('/', (req, res) => {
