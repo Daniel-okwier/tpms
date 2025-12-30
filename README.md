@@ -16,7 +16,7 @@ By integrating multiple clinical departments into a single, high-performance pla
 ![Dashboard View](./screenshots/dash2.png)
 
 ### PaientDashboard
-![PaientDashboard View](./screenshots/dash2.png)
+![PaientDashboard View](./screenshots/patients.png)
 
 
 🚀 Key Features
