@@ -1,4 +1,4 @@
-import DrugService from '../services/DrugService.js';
+import DrugService from '../services/drugService.js';
 
 export const createDrug = async (req, res) => {
     try {
